@@ -36,6 +36,8 @@ No key yet? Choose **Try the offline demo** to look around with a fake Game Mast
 
 **iPhone and iPad:** the Gemini narrator starts after your first tap anywhere on the page (Safari's rule for sound). When the Gemini voice is out of quota, the app falls back to Safari's own default voice; web pages can only use Apple's basic built-in voices (downloaded Enhanced or Premium voices are not available to Safari), so it sounds robotic. If Safari ever stays silent, a line asks you to tap once and the reply is read on that tap.
 
+**Hear nothing from the device voice on iPhone or iPad? Check Silent Mode.** It mutes the device voice and the background sounds, while the Gemini voice still plays. To turn it off, swipe down from the top-right corner of the screen to open Control Center and tap the bell so it is no longer crossed out. Older iPads and iPhones may have a switch on the side instead (orange showing means silent); newer iPhones can also use the Action button. *Settings > Voice & sound > Test device voice only* checks it.
+
 **Narrator voice quota:** by default the app makes one voice request per reply (the voice starts once the reply is written), so a daily limit such as ~100 voice requests lasts about 100 replies. *Settings > Voice & sound* trades more requests for a quicker start.
 
 ## Privacy and cost
