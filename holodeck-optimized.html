@@ -206,7 +206,7 @@
         </div>
         <div class="grp">
           <b data-i18n="grpBrowserVoice">BROWSER VOICE (FALLBACK)</b>
-          <p class="tag" data-i18n="browserVoiceHelp">Used when the AI narrator voice is off, unavailable or out of quota, or when your provider has none. Defaults to Microsoft Ana Online (Natural) in English, and to a Costa Rican or Latin American voice in Spanish, when your browser has one. Each language remembers its own choice.</p>
+          <p class="tag" data-i18n="browserVoiceHelp">Used when the AI narrator voice is off, unavailable or out of credits, or when your provider has none. The best voice your device offers is picked automatically (marked ★): Microsoft Ana Online (Natural) in English on Edge, and a Costa Rican or Latin American voice in Spanish. On iPhone and iPad, download an Enhanced or Premium voice in Settings &gt; Accessibility &gt; Spoken Content &gt; Voices (for example Ava, or Paulina for Spanish) for a far less robotic sound. Pick a voice here to override; each language remembers its own.</p>
           <label data-i18n="lblVoice">Voice</label>
           <div class="row"><select id="setVoice" style="width:100%"></select></div>
           <label><span data-i18n="lblSpeed">Speed</span> <input type="range" id="setRate" min="0.7" max="1.4" step="0.05" value="1" style="width:100%"></label>
@@ -338,7 +338,7 @@ const ESH = {
   chunk700: 'Más fluido: unas 4 solicitudes por respuesta', chunk2000: 'Menos solicitudes: unas 3 por respuesta (predeterminado)',
   lblStyle: 'Estilo de narración (cómo debe leerse)',
   grpBrowserVoice: 'VOZ DEL NAVEGADOR (RESPALDO)',
-  browserVoiceHelp: 'Se usa cuando la voz con IA está apagada, no disponible o sin cuota, o cuando su proveedor no tiene voz. En español elige una voz de Costa Rica o de Latinoamérica si su navegador la tiene; en inglés, Microsoft Ana Online (Natural). Cada idioma recuerda su propia elección.',
+  browserVoiceHelp: 'Se usa cuando la voz con IA está apagada, no disponible o sin créditos, o cuando su proveedor no tiene voz. Se elige sola la mejor voz que ofrece su dispositivo (marcada con ★): en español, una voz de Costa Rica o de Latinoamérica; en inglés, Microsoft Ana Online (Natural) en Edge. En el iPhone o iPad, descargue una voz «Mejorada» o «Premium» en Ajustes &gt; Accesibilidad &gt; Contenido leído &gt; Voces (por ejemplo Paulina en español) para un sonido mucho menos robótico. Elija una voz aquí si prefiere otra; cada idioma recuerda la suya.',
   lblVoice: 'Voz', lblSpeed: 'Velocidad',
   grpAmbient: 'SONIDO DE FONDO', lblAmbient: 'Sonido mientras se prepara la historia',
   amb0: 'Predeterminado (fondo suave en manos libres; si no, apagado)', ambCalm: 'Fondo suave', ambAuto: 'Según la escena', ambWaves: 'Olas del mar', ambRain: 'Lluvia', ambWind: 'Viento', ambOff: 'Apagado',
@@ -415,6 +415,7 @@ const ES = {
   'person': 'persona', 'place': 'lugar', 'item': 'objeto', 'faction': 'facción', 'other': 'otro',
   // voice
   'Narrator voice unavailable ({msg}). Using the browser voice instead.': 'La voz del narrador no está disponible ({msg}). Se usará la voz del navegador.',
+  'For a much better voice on iPhone or iPad, download an Enhanced or Premium voice in Settings > Accessibility > Spoken Content > Voices (for example Ava in English or Paulina in Spanish), then reload this page.': 'Para una voz mucho mejor en el iPhone o iPad, descargue una voz «Mejorada» o «Premium» en Ajustes > Accesibilidad > Contenido leído > Voces (por ejemplo Paulina en español o Ava en inglés) y vuelva a cargar esta página.',
   'Tap anywhere to hear the narrator (this browser needs a tap before it plays sound).': 'Toque en cualquier parte para oír al narrador (este navegador necesita un toque antes de reproducir sonido).',
   '(speech not supported in this browser)': '(este navegador no tiene voz)', 'Custom voice ID...': 'ID de voz personalizada...',
   'Hands-free': 'Manos libres', 'Hands-free ON': 'Manos libres ACTIVO', 'Say "{phrase}" to send': 'Diga «{phrase}» para enviar', 'What do you do?': '¿Qué hace usted?',
@@ -466,17 +467,21 @@ const ES = {
   'Opened as a local file: some browsers restrict these pages (storage, microphone permission, folder saving). For best results, serve the folder from a local web server (see the README).': 'Abierto como archivo local: algunos navegadores limitan estas páginas (almacenamiento, permiso del micrófono, carpetas). Para mejores resultados, sírvalo desde un servidor web local (vea el README).'
 };
 const Q_ES = {
-  world: { q: '¿A qué tipo de mundo quiere entrar?', h: 'Género y ambientación.', c: ['Detective noir', 'Ópera espacial', 'Alta fantasía', 'Cyberpunk', 'Misterio acogedor', 'Terror gótico', 'Viejo Oeste', 'Postapocalipsis', 'Mares piratas', 'Histórico', 'Superhéroes', 'Sorpréndame'] },
+  world: { q: '¿A qué tipo de mundo quiere entrar?', h: 'Género y ambientación.', c: ['Detective noir', 'Ópera espacial', 'Alta fantasía', 'Cyberpunk', 'Misterio acogedor', 'Terror gótico', 'Viejo Oeste', 'Postapocalipsis', 'Mares piratas', 'Histórico', 'Superhéroes', 'Sorpréndame'],
+    cs: ['Misterio de pueblo', 'Detective en la gran ciudad', 'Pueblo junto al mar', 'Pueblo de playa en el trópico', 'Viaje por carretera', 'Viejo Oeste', 'Mares piratas', 'Los locos años veinte', 'Espías de la Guerra Fría', 'Londres victoriano', 'Un golpe en la actualidad', 'Sorpréndame'] },
   vibe: { q: '¿Qué ambiente debe tener?', h: 'Elija un tono; puede elegir varios.', c: ['Crudo', 'Caprichoso', 'Épico', 'Acogedor', 'Tenso', 'Divertido', 'Melancólico', 'Romántico', 'Misterioso', 'Entrañable'] },
-  who: { q: '¿Quién es usted en esta historia?', h: 'Nombre, papel, pasado. Una frase basta.', c: ['Un detective cansado', 'Una aventurera novata', 'Un contrabandista', 'Una erudita', 'Un soldado convertido en paria', 'Alguien con amnesia'] },
+  who: { q: '¿Quién es usted en esta historia?', h: 'Nombre, papel, pasado. Una frase basta.', c: ['Un detective cansado', 'Una aventurera novata', 'Un contrabandista', 'Una erudita', 'Un soldado convertido en paria', 'Alguien con amnesia'],
+    cs: ['Una periodista de pueblo', 'Un detective retirado', 'La cocinera del barco', 'Un fotógrafo de bodas', 'Una taxista', 'Un maestro de escuela'] },
   traits: { q: '¿Cuáles son las fortalezas y los defectos de su personaje?', h: 'Importarán en la historia.', c: ['Astuto pero imprudente', 'Fuerte pero terco', 'Encantador pero mentiroso', 'Valiente pero atormentado', 'Con suerte pero sin plata'] },
-  where: { q: '¿Dónde y cuándo empieza?', h: 'Lugar, época, clima, atmósfera.', c: ['Un pueblo portuario lluvioso', 'Una estación espacial remota', 'Una capital real en noche de fiesta', 'Un puesto en el desierto', 'Un tren en marcha', 'Una ciudad que nunca duerme'] },
+  where: { q: '¿Dónde y cuándo empieza?', h: 'Lugar, época, clima, atmósfera.', c: ['Un pueblo portuario lluvioso', 'Una estación espacial remota', 'Una capital real en noche de fiesta', 'Un puesto en el desierto', 'Un tren en marcha', 'Una ciudad que nunca duerme'],
+    cs: ['Un pueblito costero', 'Una estación de tren llena de gente', 'Una boda familiar', 'Un hotel durante una tormenta', 'Una finca cafetalera en las montañas', 'Una ciudad de noche'] },
   hook: { q: '¿Qué lo mete en la historia?', h: 'El gancho o la meta central.', c: ['Encontrar a alguien desaparecido', 'Resolver un crimen', 'Sobrevivir y escapar', 'Recuperar un tesoro perdido', 'Destapar una conspiración', 'Proteger a alguien', 'Saldar una cuenta', 'Construir algo nuevo'] },
   allies: { q: '¿Quién lo acompaña?', h: 'Aliados, compañeros o nadie.', c: ['Lobo solitario', 'Un compañero leal', 'Un rival convertido en aliado', 'Una pequeña tripulación', 'Un mentor misterioso', 'Un animal que habla'] },
-  threat: { q: '¿Qué se interpone en su camino?', h: 'La amenaza principal o el antagonista.', c: ['Una organización en las sombras', 'Un villano astuto', 'La naturaleza misma', 'El tiempo que se acaba', 'Mi propio pasado', 'Algo sobrenatural', 'Una traición desde adentro'] },
+  threat: { q: '¿Qué se interpone en su camino?', h: 'La amenaza principal o el antagonista.', c: ['Una organización en las sombras', 'Un villano astuto', 'La naturaleza misma', 'El tiempo que se acaba', 'Mi propio pasado', 'Algo sobrenatural', 'Una traición desde adentro'],
+    cs: ['Un estafador astuto', 'Una tormenta', 'Un rival', 'El tiempo que se acaba', 'Un secreto de familia', 'Un malentendido'] },
   play: { q: '¿Cómo le gusta jugar?', h: 'Estilo de juego y dificultad.', c: ['Mucho diálogo', 'Mucha acción', 'Exploración', 'Acertijos y pistas', 'Indulgente', 'Peligroso, con consecuencias reales', 'Respuestas cortas y ágiles', 'Prosa rica y detallada'] },
   avoid: { q: '¿Algo que evitar, o algo más que debamos saber?', h: 'Límites de contenido, libros o películas favoritas, pedidos especiales.', c: ['Apto para mayores de 13', 'Sin sangre', 'Sin romance', 'Al estilo de una novela clásica', 'Nada prohibido, dentro de lo razonable'] },
-  length: { q: '¿Qué tan larga debe ser la aventura?', h: 'La historia llega a un final de verdad en su último turno y luego recibe una libreta de calificaciones.', c: ['5 turnos (una viñeta rápida)', '10 turnos', '20 turnos', '30 turnos', '100 turnos (una épica)'] },
+  length: { q: '¿Qué tan larga debe ser la aventura?', h: 'La historia llega a un final de verdad en su último turno y luego recibe una libreta de calificaciones. Con 5 o 10 turnos es un cuento corto, rápido y fácil de seguir.', c: ['5 turnos (un cuento rápido)', '10 turnos (un cuento corto)', '20 turnos', '30 turnos', '100 turnos (una épica)'] },
   romance: { q: 'Romance: usted es un(a) ___ a quien le interesa ___.', h: 'Complete los espacios con sus palabras, por ejemplo «un espía retirado a quien le interesa la nueva vecina» o «una bardo nerviosa a quien le interesan las mujeres».', c: [], ph: 'Soy un(a) ... a quien le interesa ...' },
   link: { q: '¿Cómo se conecta la nueva historia con la anterior?', h: 'El elenco y el mundo son los mismos; esto define qué recuerdan.', c: ['Secuela: sigue donde terminó la anterior', 'Años después', 'Nuevo comienzo: mismo elenco, nueva historia', 'Precuela: antes de que todo empezara'] },
   who2: { q: '¿Quién es usted esta vez?', h: 'Siga con su personaje, juegue con alguien del elenco o con alguien nuevo.', c: ['El mismo personaje de antes', 'Uno de los personajes que regresan', 'Alguien nuevo'] }
@@ -911,7 +916,7 @@ async function takeTurn(input, hidden, onDelta) {
   const chapters = (a.chunks || []).slice(-tune('chapters')).map(c => '- Turns ' + c.from + '-' + c.to + ': ' + c.text).join('\n') || '(none yet)';
   // Prompt order is deliberate: the parts that rarely change come first (rules, bible, chapters, GM notes) so the API can reuse its
   // prefix cache; the parts that change every turn (map, memories, director notes) come after CACHE_BREAK.
-  const system = GM_RULES + '\n\n## STORY BIBLE\n' + a.bible +
+  const system = GM_RULES + (isShort(a) ? '\n' + shortRules(a) : '') + '\n\n## STORY BIBLE\n' + a.bible +
     (pinned.length ? '\n\n## PLAYER-SET FACTS (written by the player; they override earlier narration, lore and notes)\n' + pinnedLines.map(x => '- ' + x).join('\n') : '') +
     '\n\n## STORY SO FAR (chapter summaries)\n' + chapters + '\n\n## PRIVATE GM NOTES (never reveal outright)\n' + gmText(a) + CACHE_BREAK +
     '## MISSION MAP\n' + mapText(a) + '\n## RELEVANT MEMORIES\n' + mem + '\n\n## DIRECTOR NOTES FOR THIS REPLY (private; do not mention)\n' + directorNotes(a) +
@@ -1062,7 +1067,8 @@ async function makeGmNotes(a, revise) {
   const recentLore = Object.values(a.lore).sort((x, y) => (y.lastSeen || 0) - (x.lastSeen || 0)).slice(0, 30);   // only the 30 most recently seen entries, so this call does not grow with the lorebook
   const ctx = 'BIBLE:\n' + stripWishes(a.bible) + '\n\n' + playerFactsText(a) + 'LORE:\n' + recentLore.map(loreLine).join('\n') + '\n\n' + mapText(a) +
     '\nRECENT TURNS:\n' + a.transcript.slice(-6).map(t => t.role + ': ' + t.text).join('\n');
-  const raw = await chat('plan', [{ role: 'system', content: PLAN_RULES + (revise ? '\nYou are UPDATING existing notes: drop secrets the player has now discovered, add fresh ones, update thread statuses, and pick a new big_reveal only if the old one has happened. If PLAYER-SET FACTS are given, rewrite every note to agree with them (names, pronouns, roles).' : '') },
+  const raw = await chat('plan', [{ role: 'system', content: PLAN_RULES + (revise ? '\nYou are UPDATING existing notes: drop secrets the player has now discovered, add fresh ones, update thread statuses, and pick a new big_reveal only if the old one has happened. If PLAYER-SET FACTS are given, rewrite every note to agree with them (names, pronouns, roles).' : '') +
+    (isShort(a) ? '\nThis is a SHORT story: keep the notes small and simple (2-3 secrets, 1-2 threads, a cast of 2-3) so the story stays easy to follow.' : '') },
     { role: 'user', content: (revise ? 'CURRENT NOTES:\n' + gmText(a) + '\n\n' : '') + ctx }]);
   const g = parseJson(raw);
   if (g && (g.voice || g.secrets)) a.gm = { voice: g.voice || '', secrets: g.secrets || [], threads: g.threads || [], big_reveal: g.big_reveal || '', cast: g.cast || [] };
@@ -1086,13 +1092,14 @@ const HUMOR = ['dry understatement', 'a character with absurd but sincere priori
 const ENDINGS = ['End on a reveal that reframes something from earlier.', 'End on an interruption: someone arrives, something breaks, or a message lands.', 'End on a vivid image or a line of dialogue that hangs in the air.', 'End with a pointed question posed by the world or an NPC, not a menu of options.',
   'End mid-motion, on a hook.', 'End with a quiet observation that invites the player to act, without listing choices.'];
 function directorNotes(a) {
-  const turn = a.transcript.filter(t => t.role === 'player').length + 1, m = turn % 10;
-  const phase = m >= 1 && m <= 6 ? 'rising' : (m === 7 || m === 8) ? 'peak' : 'release';
+  const turn = a.transcript.filter(t => t.role === 'player').length + 1, m = turn % 10, short = isShort(a);
+  // Long stories run a 10-turn pacing cycle; a short story is one arc: rising for the first half, then peak, then the ending.
+  const phase = short ? (turn / a.length <= 0.5 ? 'rising' : turn < a.length ? 'peak' : 'release') : m >= 1 && m <= 6 ? 'rising' : (m === 7 || m === 8) ? 'peak' : 'release';
   const weights = { rising: { seed: 2, npc: 2, world: 2, sensory: 1.5, banter: 2, texture: 2, clock: 1.5, payoff: 1.5 }, peak: { complication: 3, choice: 2, wonder: 1, clock: 2.5, payoff: 2.5, banter: 1.5 }, release: { quiet: 2, heart: 2, wonder: 1.5, sensory: 1, banter: 2.5, texture: 1.5, payoff: 2 } }[phase];
   a.dir = a.dir || {};
-  const pool = Object.keys(DIRECTOR).filter(k => turn - (a.dir[k] || -99) >= 3).map(k => [k, weights[k] || 1]);
+  const pool = Object.keys(DIRECTOR).filter(k => (!short || SHORT_NUDGES.includes(k)) && turn - (a.dir[k] || -99) >= 3).map(k => [k, weights[k] || 1]);
   const picked = [];
-  for (let n = 0; n < 2 && pool.length; n++) {
+  for (let n = 0; n < (short ? 1 : 2) && pool.length; n++) {
     let r = Math.random() * pool.reduce((s, p) => s + p[1], 0), i = 0;
     while (i < pool.length - 1 && (r -= pool[i][1]) > 0) i++;
     picked.push(pool[i][0]); a.dir[pool[i][0]] = turn; pool.splice(i, 1);
@@ -1100,8 +1107,8 @@ function directorNotes(a) {
   const lines = ['PACING: ' + { rising: 'momentum is building; keep things moving and curious.', peak: 'this is a high-intensity beat; make it count and force a decisive moment.', release: 'aftermath and breathing room; let consequences land, then open a fresh hook.' }[phase]];
   picked.forEach(k => lines.push(DIRECTOR[k]));
   const old = Object.values(a.lore).filter(e => turn - (e.lastSeen ? Math.ceil(e.lastSeen / 2) : 0) > 8);
-  if (old.length && Math.random() < 0.3) { const e = old[Math.floor(Math.random() * old.length)]; lines.push('Callback: bring back "' + e.name + '" (' + (e.desc || e.type) + ') in a natural, meaningful way.'); }
-  if (a.playCats && a.playCats.length && Math.random() < 0.6) lines.push('Gameplay focus for this reply: ' + a.playCats[Math.floor(Math.random() * a.playCats.length)] + '. Shape the main challenge or interaction around it, organically and without naming the category.');
+  if (!short && old.length && Math.random() < 0.3) { const e = old[Math.floor(Math.random() * old.length)]; lines.push('Callback: bring back "' + e.name + '" (' + (e.desc || e.type) + ') in a natural, meaningful way.'); }
+  if (a.playCats && a.playCats.length && Math.random() < (short ? 0.4 : 0.6)) lines.push('Gameplay focus for this reply: ' + a.playCats[Math.floor(Math.random() * a.playCats.length)] + '. Shape the main challenge or interaction around it, organically and without naming the category.');
   if (a.length && a.roadmap) {
     const act = a.roadmap.find(r => turn >= r.from && turn <= r.to) || a.roadmap[a.roadmap.length - 1];
     lines.push("SECRET ROADMAP: this is player turn " + turn + " of " + a.length + ". Steer toward this act goal without railroading or revealing it: " + act.goal);
@@ -1111,7 +1118,7 @@ function directorNotes(a) {
   if (!(a.length && turn >= a.length)) lines.push(ENDINGS[Math.floor(Math.random() * ENDINGS.length)]);
   lines.push('Humour this reply: ' + HUMOR[Math.floor(Math.random() * HUMOR.length)] + '. Land it in the specifics of this scene; one sharp joke beats three soft ones. Skip it only if the moment is truly grave.');
   const cast = (a.gm && a.gm.cast) || [];
-  if (cast.length && Math.random() < 0.75) { const c = cast[Math.floor(Math.random() * cast.length)]; lines.push('Motive in action: ' + c.name + ' wants ' + c.wants + ' and fears ' + c.fears + '. Show them pursuing it visibly in this reply (a choice, a lie, a favour, a closed door), even where it cuts against what the player wants.'); }
+  if (!short && cast.length && Math.random() < 0.75) { const c = cast[Math.floor(Math.random() * cast.length)]; lines.push('Motive in action: ' + c.name + ' wants ' + c.wants + ' and fears ' + c.fears + '. Show them pursuing it visibly in this reply (a choice, a lie, a favour, a closed door), even where it cuts against what the player wants.'); }
   const rep = repetitionNote(a); if (rep) lines.push(rep);
   return lines.map(l => '- ' + l).join('\n');
 }
@@ -1237,16 +1244,30 @@ async function recap() {
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const TTS = 'speechSynthesis' in window;
 const FALLBACK_VOICE = 'Microsoft Ana Online (Natural)';   // Edge's names look like "Microsoft Ana Online (Natural) - English (United States)"
-// Spanish: prefer a Costa Rican voice (Edge has natural es-CR voices), then Latin American, then any Spanish voice.
-function bestSpanish(vs) {
-  const es = vs.filter(v => /^es/i.test(v.lang)), nat = v => /natural|online|premium|enhanced/i.test(v.name), latam = v => /-(CR|MX|US|419|CO|PA|GT)$/i.test(v.lang.replace('_', '-'));
-  return es.find(v => /CR$/i.test(v.lang) && nat(v)) || es.find(v => /CR$/i.test(v.lang)) || es.find(v => latam(v) && nat(v)) || es.find(latam) || es.find(nat) || es[0] || null;
+// Browser voices vary wildly. iPhone and iPad list small "compact" voices, joke voices (Bells, Bubbles, Grandpa...) and, once downloaded in
+// Settings > Accessibility > Spoken Content > Voices, much better Enhanced and Premium ones. Score them so the best real voice wins:
+// Premium > Enhanced/neural > natural/online cloud voices > Google's voices > the rest; Costa Rican, then Latin American, for Spanish.
+const JOKE_VOICE = /^(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Fred|Junior|Ralph|Kathy|Grandma|Grandpa|Eddy|Flo|Reed|Rocko|Sandy|Shelley)\b/i;
+function voiceScore(v) {
+  const id = v.name + ' ' + (v.voiceURI || ''), lang = v.lang.replace('_', '-');
+  if (!lang.toLowerCase().startsWith(LANG())) return -1;
+  if (JOKE_VOICE.test(v.name) || /eloquence/i.test(v.voiceURI || '')) return 0;
+  let s = 10;
+  if (v.name.startsWith(FALLBACK_VOICE)) s += 100;
+  if (/premium/i.test(id)) s += 60; else if (/enhanced|neural/i.test(id)) s += 50; else if (/natural|online/i.test(id)) s += 45; else if (/^Google /.test(v.name)) s += 30;
+  if (/compact/i.test(id)) s -= 5;
+  if (LANG() === 'es') s += /-CR$/i.test(lang) ? 15 : /-(MX|US|419|CO|PA|GT)$/i.test(lang) ? 8 : 0;
+  else if (/-US$/i.test(lang)) s += 3;
+  if (/^(Ava|Zoe|Evan|Nathan|Joelle|Noelle|Allison|Susan|Samantha|Tom|Serena|Paulina|M[oó]nica|Marisol|Ang[eé]lica|Juan|Jorge|Diego)\b/i.test(v.name)) s += 8;
+  return s;
 }
-const voiceKey = () => LANG() === 'es' ? 'voiceEs' : 'voice';   // each language remembers its own browser voice
+const rankedVoices = () => speechSynthesis.getVoices().filter(v => voiceScore(v) >= 0).sort((a, b) => voiceScore(b) - voiceScore(a) || a.name.localeCompare(b.name));
+const voiceKey = () => LANG() === 'es' ? 'voiceEs' : 'voice';   // each language remembers its own browser voice (only when you pick one)
 function browserVoice() {
-  const vs = speechSynthesis.getVoices(), want = S()[voiceKey()];
-  return vs.find(v => v.name === want) || (LANG() === 'es' ? bestSpanish(vs) : vs.find(v => v.name.startsWith(FALLBACK_VOICE))) || null;
+  const want = S()[voiceKey()];
+  return speechSynthesis.getVoices().find(v => v.name === want) || rankedVoices()[0] || null;
 }
+const goodVoice = v => !!v && voiceScore(v) >= 55;   // Premium, Enhanced, or a natural cloud voice
 const utterLang = v => v ? v.lang : (LANG() === 'es' ? 'es-MX' : 'en-US');
 let rec = null, listening = false, handsActive = false, lastReply = null;
 
@@ -1339,7 +1360,8 @@ function makeAiSpeaker(done) {
   // complete, so the next clip is normally ready before the current one finishes (no mid-reply gaps) while the total request count stays low.
   let buf = '', pend = '', q = [], ended = false, fired = false, playing = false, next = 0, target = 130, stopped = false, audio = null;
   const clean = t => t.replace(/[*_#>`]/g, '').replace(/\s+/g, ' ').trim();
-  const warn = e => { if (voiceWarned) return; voiceWarned = true; console.warn(e); addMsg('sys', T('Narrator voice unavailable ({msg}). Using the browser voice instead.', { msg: String(e.message).slice(0, 140) })); };
+  const warn = e => { if (voiceWarned) return; voiceWarned = true; console.warn(e);
+    addMsg('sys', T('Narrator voice unavailable ({msg}). Using the browser voice instead.', { msg: String(e.message).slice(0, 140) }) + (IOS && TTS && !goodVoice(browserVoice()) ? ' ' + T(IOS_VOICE_TIP) : '')); };
   function flush() {
     const t = clean(pend); pend = ''; if (!t) return; target = Math.min(target * 3, Math.max(400, +S().ttsChunk || 2000));
     q.push({ text: t, p: aiTTS(t).then(url => ({ url }), err => ({ err })) }); pump();
@@ -1404,14 +1426,15 @@ function initVoices() {
   if (!TTS) { $('setVoice').innerHTML = '<option value="">' + esc(T('(speech not supported in this browser)')) + '</option>'; return; }
   const fill = () => {
     const vs = speechSynthesis.getVoices(); if (!vs.length) return;
-    const lang = LANG();
-    const sorted = [...vs].sort((a, b) => (b.lang.toLowerCase().startsWith(lang) - a.lang.toLowerCase().startsWith(lang)) || a.name.localeCompare(b.name));
-    $('setVoice').innerHTML = sorted.map(v => '<option value="' + esc(v.name) + '">' + esc(v.name + ' (' + v.lang + ')') + '</option>').join('');
+    const ranked = rankedVoices(), sorted = ranked.concat(vs.filter(v => !ranked.includes(v)).sort((a, b) => a.name.localeCompare(b.name)));   // best voices for this language first
+    $('setVoice').innerHTML = sorted.map(v => '<option value="' + esc(v.name) + '">' + esc(v.name + ' (' + v.lang + ')') + (goodVoice(v) ? ' ★' : '') + '</option>').join('');
     const want = (browserVoice() || {}).name;   // saved choice for this language, else the language's default
     if (want) $('setVoice').value = want;
   };
   fill(); speechSynthesis.onvoiceschanged = fill;
 }
+$('setVoice').addEventListener('change', () => { if ($('setVoice').value) { db.settings[voiceKey()] = $('setVoice').value; persist(); } });
+const IOS_VOICE_TIP = 'For a much better voice on iPhone or iPad, download an Enhanced or Premium voice in Settings > Accessibility > Spoken Content > Voices (for example Ava in English or Paulina in Spanish), then reload this page.';
 $('testVoice').onclick = () => { autoSave(); voiceWarned = false; voiceBlocked = false; speak(T('The rain came down over the harbour in long silver threads, and somewhere out in the fog, a ship\'s bell began to toll. "Captain," she whispered, "they are early."'), null, true); };
 $('story').addEventListener('click', e => { const m = e.target.closest('.msg.gm'); if (m) speak(m.textContent, null, true); });
 
@@ -1565,18 +1588,23 @@ $('micBtn').onclick = () => {
 // ---------------- Experience Curator ----------------
 // Answers are stored by question id. Text shown to the player follows the language (Q_ES holds the Spanish), and answers keep the words
 // the player saw, so a Spanish questionnaire produces a Spanish wishes list.
+// Length comes first: a 5 or 10 turn story is told as a clean, simple short story, and its option chips (cs) stay on Earth, in familiar times.
 const QUESTIONS = [
-  { id: 'world', q: 'What kind of world do you want to step into?', h: 'Genre and setting.', c: ['Noir detective', 'Space opera', 'High fantasy', 'Cyberpunk', 'Cozy mystery', 'Gothic horror', 'Wild West', 'Post-apocalypse', 'Pirate seas', 'Historical', 'Superhero', 'Surprise me'] },
+  { id: 'length', q: 'How long should the adventure be?', h: 'The story builds to a real ending on your last turn, then you get a report card. 5 or 10 turns makes a quick, easy-to-follow short story.', c: ['5 turns (a quick short story)', '10 turns (a short story)', '20 turns', '30 turns', '100 turns (an epic)'] },
+  { id: 'world', q: 'What kind of world do you want to step into?', h: 'Genre and setting.', c: ['Noir detective', 'Space opera', 'High fantasy', 'Cyberpunk', 'Cozy mystery', 'Gothic horror', 'Wild West', 'Post-apocalypse', 'Pirate seas', 'Historical', 'Superhero', 'Surprise me'],
+    cs: ['Small-town mystery', 'Big-city detective', 'Seaside village', 'Tropical beach town', 'Road trip', 'Wild West', 'Pirate seas', 'Roaring Twenties', 'Cold War spies', 'Victorian London', 'Modern-day heist', 'Surprise me'] },
   { id: 'vibe', q: 'What vibe should it have?', h: 'Pick a mood; more than one is fine.', c: ['Gritty', 'Whimsical', 'Epic', 'Cozy', 'Tense', 'Funny', 'Melancholic', 'Romantic', 'Mysterious', 'Wholesome'] },
-  { id: 'who', q: 'Who are you in this story?', h: 'Name, role, background. A sentence is enough.', c: ['A weary detective', 'A rookie adventurer', 'A smuggler', 'A scholar', 'A soldier turned outcast', 'A stranger with amnesia'] },
+  { id: 'who', q: 'Who are you in this story?', h: 'Name, role, background. A sentence is enough.', c: ['A weary detective', 'A rookie adventurer', 'A smuggler', 'A scholar', 'A soldier turned outcast', 'A stranger with amnesia'],
+    cs: ['A small-town reporter', 'A retired detective', 'A ship\'s cook', 'A wedding photographer', 'A taxi driver', 'A schoolteacher'] },
   { id: 'traits', q: 'What are your character\'s strengths and flaws?', h: 'These will matter in the story.', c: ['Clever but reckless', 'Strong but stubborn', 'Charming but dishonest', 'Brave but haunted', 'Lucky but broke'] },
-  { id: 'where', q: 'Where and when does it begin?', h: 'Place, era, weather, atmosphere.', c: ['A rainy harbour town', 'A remote space station', 'A royal capital on a festival night', 'A desert outpost', 'A train in motion', 'A city that never sleeps'] },
+  { id: 'where', q: 'Where and when does it begin?', h: 'Place, era, weather, atmosphere.', c: ['A rainy harbour town', 'A remote space station', 'A royal capital on a festival night', 'A desert outpost', 'A train in motion', 'A city that never sleeps'],
+    cs: ['A small coastal town', 'A busy train station', 'A family wedding', 'A hotel during a storm', 'A coffee farm in the hills', 'A city at night'] },
   { id: 'hook', q: 'What is pulling you into the story?', h: 'The hook or central goal.', c: ['Find someone missing', 'Solve a crime', 'Survive and escape', 'Recover a lost treasure', 'Uncover a conspiracy', 'Protect someone', 'Settle a score', 'Build something new'] },
   { id: 'allies', q: 'Who is by your side?', h: 'Allies, companions, or none.', c: ['Lone wolf', 'A loyal sidekick', 'A rival turned ally', 'A small crew', 'A mysterious mentor', 'A talking animal'] },
-  { id: 'threat', q: 'What stands in your way?', h: 'The main threat or antagonist.', c: ['A shadowy organisation', 'A single cunning villain', 'Nature itself', 'A ticking clock', 'My own past', 'Something supernatural', 'Betrayal from within'] },
+  { id: 'threat', q: 'What stands in your way?', h: 'The main threat or antagonist.', c: ['A shadowy organisation', 'A single cunning villain', 'Nature itself', 'A ticking clock', 'My own past', 'Something supernatural', 'Betrayal from within'],
+    cs: ['A clever con artist', 'A storm', 'A rival', 'A ticking clock', 'A family secret', 'A misunderstanding'] },
   { id: 'play', q: 'How do you like to play?', h: 'Style of play and difficulty.', c: ['Lots of dialogue', 'Action heavy', 'Exploration', 'Puzzles and clues', 'Forgiving', 'Dangerous, with real consequences', 'Short punchy replies', 'Rich, detailed prose'] },
-  { id: 'avoid', q: 'Anything to avoid, or anything else to know?', h: 'Content boundaries, favourite books/films to echo, special requests.', c: ['Keep it PG-13', 'No gore', 'No romance', 'In the style of a classic novel', 'Nothing off limits within reason'] },
-  { id: 'length', q: 'How long should the adventure be?', h: 'The story builds to a real ending on your last turn, then you get a report card.', c: ['5 turns (a quick vignette)', '10 turns', '20 turns', '30 turns', '100 turns (an epic)'] }
+  { id: 'avoid', q: 'Anything to avoid, or anything else to know?', h: 'Content boundaries, favourite books/films to echo, special requests.', c: ['Keep it PG-13', 'No gore', 'No romance', 'In the style of a classic novel', 'Nothing off limits within reason'] }
 ];
 const QBY = Object.fromEntries(QUESTIONS.map(q => [q.id, q]));
 // Follow-up asked last, only when the vibe (or genre) includes romance and the boundaries do not rule it out. Free text, no chips.
@@ -1584,8 +1612,12 @@ const ROMANCE_Q = { id: 'romance', q: 'Romance: you are a ___ who is interested 
 // "Same cast, new story": a shorter questionnaire. The cast, world and the old answers below carry over (and are pre-filled).
 const LINK_Q = { id: 'link', q: 'How does the new story connect to the old one?', h: 'Same cast and world either way; this sets what they remember.', c: ['Sequel: it picks up after the last story', 'Years later', 'Fresh start: same cast, new story', 'Prequel: before it all began'] };
 const WHO2_Q = { id: 'who', tid: 'who2', q: 'Who are you this time?', h: 'Keep your character, play one of the returning cast, or someone new.', c: ['The same character as before', 'One of the returning characters', 'Someone new'] };
-const SEQUEL_QS = [LINK_Q, QBY.hook, WHO2_Q, QBY.vibe, QBY.play, QBY.avoid, QBY.length];
-const qL = (q, f) => { const es = LANG() === 'es' && Q_ES[q.tid || q.id]; return es && es[f] !== undefined ? es[f] : q[f]; };   // a question's text in the current language
+const SEQUEL_QS = [QBY.length, LINK_Q, QBY.hook, WHO2_Q, QBY.vibe, QBY.play, QBY.avoid];
+const shortPick = () => { const m = /\d+/.exec(cur.answers.length || ''); return !!m && +m[0] <= 10; };   // a 5 or 10 turn story was chosen
+const qL = (q, f) => {   // a question's text in the current language; short stories get the grounded option chips
+  if (f === 'c' && q.cs && shortPick()) f = 'cs';
+  const es = LANG() === 'es' && Q_ES[q.tid || q.id]; return es && es[f] !== undefined ? es[f] : q[f];
+};
 const NOPREF = () => T('(no preference: you decide, surprise me)');
 const isNoPref = s => /^\((no preference|sin preferencia)/i.test(String(s || ''));
 let cur = { i: 0, answers: {}, extra: {} };
@@ -1603,12 +1635,12 @@ function curatorAnswer(a, id) {
 // ---------------- Extra options: if the player lingers on a question, the cheap model suggests more chips that fit their earlier answers ----------------
 // The offline demo has no model, so it shows a few ready-made extras instead (same idea, nothing tailored).
 const DEMO_MORE = {
-  en: { world: ['Steampunk', 'Mythic Greece', 'Underwater city', 'Haunted carnival'], vibe: ['Dreamy', 'Bittersweet', 'Swashbuckling', 'Eerie'],
+  en: { world: ['Ancient Rome', '1960s Hollywood', 'A Caribbean island', 'Small-town carnival'], vibe: ['Dreamy', 'Bittersweet', 'Swashbuckling', 'Eerie'],
     who: ['A retired thief', 'A ship\'s cook', 'A disgraced knight', 'A street magician'], traits: ['Kind but naive', 'Proud but loyal', 'Curious but clumsy', 'Calm but secretive'],
     where: ['A floating market', 'A snowbound monastery', 'A lighthouse at dusk', 'A jungle ruin'], hook: ['Deliver a secret message', 'Break a curse', 'Win a contest', 'Clear your name'],
     allies: ['An old friend', 'A reluctant guard', 'A clever child', 'A robot companion'], threat: ['A corrupt official', 'A rival treasure hunter', 'A spreading plague', 'A broken promise'],
     play: ['Heist planning', 'Social intrigue', 'Chase scenes', 'Negotiation'], avoid: ['No spiders', 'Light on violence', 'Keep it hopeful', 'In the style of a fairy tale'] },
-  es: { world: ['Steampunk', 'Grecia mítica', 'Ciudad submarina', 'Feria embrujada'], vibe: ['Soñador', 'Agridulce', 'Aventurero', 'Inquietante'],
+  es: { world: ['La antigua Roma', 'Hollywood en los sesenta', 'Una isla del Caribe', 'Feria de pueblo'], vibe: ['Soñador', 'Agridulce', 'Aventurero', 'Inquietante'],
     who: ['Un ladrón retirado', 'La cocinera del barco', 'Un caballero caído en desgracia', 'Una maga callejera'], traits: ['Amable pero ingenuo', 'Orgulloso pero leal', 'Curioso pero torpe', 'Tranquilo pero reservado'],
     where: ['Un mercado flotante', 'Un monasterio entre la nieve', 'Un faro al atardecer', 'Unas ruinas en la selva'], hook: ['Entregar un mensaje secreto', 'Romper una maldición', 'Ganar una competencia', 'Limpiar su nombre'],
     allies: ['Un viejo amigo', 'Un guardia a regañadientes', 'Una niña muy lista', 'Un robot compañero'], threat: ['Un funcionario corrupto', 'Un cazatesoros rival', 'Una plaga que se extiende', 'Una promesa rota'],
@@ -1643,7 +1675,8 @@ async function moreOptions(id) {
   $('curMsg').textContent = T('Thinking of more options...');
   try {
     const q = qs[i], prior = qs.slice(0, i).map(x => '- ' + qL(x, 'q') + ' ' + (cur.answers[x.id] || '(open)')).join('\n') || '(nothing yet)';
-    const gp = id === 'play' ? ' For this question the options must be GAMEPLAY CATEGORIES (short, e.g. "Heist planning", "Social intrigue", "Chase scenes", "Survival", "Negotiation", "Mystery solving").' : '';
+    const gp = (id === 'play' ? ' For this question the options must be GAMEPLAY CATEGORIES (short, e.g. "Heist planning", "Social intrigue", "Chase scenes", "Survival", "Negotiation", "Mystery solving").' : '') +
+      (shortPick() ? ' The player chose a SHORT story: keep options simple and grounded, set on Earth today or in a familiar period of history; avoid high fantasy, science fiction and invented worlds.' : '');
     const raw = await chat('options', [{ role: 'system', content: 'Output ONLY JSON: {"options":["6 new options"]}. Match the style of the EXISTING OPTIONS exactly: broad, high-level, generic categories of 1-4 words that work for any story (like "Noir detective", "Cozy", "A loyal sidekick", "A ticking clock"). Do NOT invent plot details, character names, place names or anything specific; stay at the same level of abstraction. They should fit the earlier answers in spirit and must not repeat the existing options.' + gp },
       { role: 'user', content: 'EARLIER ANSWERS:\n' + prior + '\n\nQUESTION: ' + qL(q, 'q') + ' (' + qL(q, 'h') + ')\nEXISTING OPTIONS: ' + qL(q, 'c').join('; ') }]);
     const opts = (parseJson(raw).options || []).slice(0, 8); cur.extra[id] = opts;
@@ -1682,7 +1715,7 @@ async function curAdvance() {
   $('curNext').disabled = true; $('curMsg').textContent = T('The curator is building your world...');
   // The chosen "how do you like to play" options (including AI-suggested ones) become the gameplay categories the Director rotates through at random.
   const notCats = [...QBY.play.c.slice(4), ...Q_ES.play.c.slice(4)].map(s => s.toLowerCase());
-  const cats = (cur.answers.play || '').split(/,\s*/).map(s => s.trim()).filter(s => s && !isNoPref(s) && !notCats.includes(s.toLowerCase())).slice(0, 6);
+  const cats = (isNoPref(cur.answers.play) ? '' : cur.answers.play || '').split(/,\s*/).map(s => s.trim()).filter(s => s && !notCats.includes(s.toLowerCase())).slice(0, 6);   // "surprise me" contains a comma, so drop it whole
   try { await createAdventure(name, answers, cats, cur.src); }
   catch (e) { $('curMsg').textContent = T('Error: {msg}', { msg: e.message }); $('curNext').disabled = false; return; }
   $('curNext').disabled = false;
@@ -1709,6 +1742,7 @@ const CREATE_RULES = `You are a story architect for an interactive text adventur
 The adventure lasts exactly the number of player turns given at the end of the questionnaire (N). The roadmap has 3-10 acts (fewer for short adventures) that cover turns 1..N with no gaps or overlaps, include a midpoint reversal and a low point, rise to a climax, and make the final act a definite, satisfying ending of the main goal. Goals are steering points for the hidden Game Master, not rigid scripts.
 Provide 4-6 beats (the first active), 3-6 lore entries, and a cast of 3-5 characters with conflicting motivations. Where an answer says "surprise me", invent something fitting the other answers. Respect content boundaries.
 If there is a Romance answer ("you are a ... who is interested in ..."), it defines who the player character is and who they are drawn to: put it in the bible, build at least one fitting love interest into the cast and lore (with their own wants, secrets and agency, never just a prize), and let the romance develop gradually with real obstacles, alongside the main plot rather than replacing it. No commentary, no markdown fences.`;
+const SHORT_CREATE = `SHORT STORY (N is 10 or fewer): it must read like a great short story, so keep the world small and easy to follow. Bible max 200 words. A cast of 2-3 characters (at most one antagonist), 2-3 places, 3-4 beats, 2-3 secrets, 1-2 threads, and a roadmap of 3 acts (setup, turn, ending). Give the player one clear, concrete goal from the start. If the world or setting is open ("surprise me"), choose a grounded, familiar setting on Earth (today or a well-known period of history), not fantasy or science fiction.`;
 const SEQUEL_RULES = `This new adventure REUSES THE CAST AND WORLD of an earlier one (SOURCE WORLD below). Keep every returning character's name, personality, way of speaking, relationships and history, and keep the places, factions and items; the bible must introduce them as returning. Facts the player set by hand (PLAYER-SET FACTS) must be kept exactly. Follow the connection answer: for a sequel or "years later", the earlier events really happened and have consequences (changed relationships, debts, scars, reputations); for a fresh start or a prequel, those events have not happened, so describe the characters as they were before them. Invent a NEW central plot, threat, secrets, big_reveal and roadmap; never repeat the earlier plot. You may add a few new characters, but the returning cast is the heart of the story. In "lore", list new entries plus returning entries whose description should change for this story (for a fresh start or prequel, remove references to the earlier story's events). Include the returning characters in "cast" with fresh wants, fears, secrets and next moves.`;
 function sourceWorld(src, name) {   // everything the architect needs to bring a cast and world back
   const g = src.gm || {}, story = (src.result && src.result.summary) || (src.chunks || []).map(c => c.text).join('\n') || src.events.slice(-30).join('\n') || '(the earlier story barely started)';
@@ -1737,6 +1771,16 @@ function validRoadmap(r, N) {   // accept the model's roadmap only if it is well
   return acts.every(x => x.to >= x.from) ? acts : null;
 }
 const playerTurns = a => a.transcript.filter(t => t.role === 'player').length;
+// ---------------- Short stories (5-10 turns): told like a polished short story, simple to follow ----------------
+const isShort = a => !!a && (a.length || 99) <= 10;
+const shortRules = a => `
+SHORT STORY MODE (this adventure is only ${a.length} turns; where this conflicts with the craft notes above, this wins)
+- Write it like a celebrated short story: impactful, precise and clean. Plain words, short sentences and short paragraphs; every line earns its place. Usually 80-150 words per reply.
+- Keep it easy to follow, never mentally taxing: one clear goal the player understands from the first reply, one main place (two at most), and no more than three named characters. No subplots, side quests, invented jargon or complicated rules.
+- Every reply moves the story clearly forward, and the player's next move should feel obvious and inviting without listing options.
+- Keep humour and intrigue quick and light: one good laugh or one sharp question per reply is plenty. Make it a page turner.
+- Plant one memorable detail early and pay it off at the end. The ending lands with feeling: a turn, a reveal or a moment of grace that makes the whole story click.`;
+const SHORT_NUDGES = ['sensory', 'heart', 'banter', 'choice', 'payoff', 'complication', 'wonder', 'quiet'];   // the director's simpler moves; no side plots, off-screen events or hidden agendas
 const FINAL_RULES = `You are a high school English teacher marking a student's interactive-fiction session, and also the judge of the player's play. Be fair but honest and specific, like real margin comments; do not inflate grades.
 GRADING CALIBRATION (be strict): grade against published fiction and strong roleplay, not against effort. Typical sessions land at 70-85; 86-92 needs clear excellence; 93+ is very rare; 100 is never given. Every grade must be backed by at least one specific strength AND one specific weakness cited from the transcript. For the player, "followed" measures how much of each roadmap act was actually achieved within its own turns, not whether the player stayed vaguely on theme: give 90+ only if every act was clearly hit, and mark an act "yes" only when its goal was fully achieved, otherwise "partly" or "no". Judge decisions on risk taken, consequences accepted, problem-solving and variety; passive, repetitive or consequence-free play scores lower. Ignore voice-to-text transcription errors in the player's words: never penalise or mention them. Letter grades must match scores (A 93-100, A- 90-92, B+ 87-89, B 83-86, B- 80-82, C+ 77-79, C 70-76, D or F below 70).
 Output ONLY one JSON object:
@@ -1787,7 +1831,7 @@ async function createAdventure(name, answers, cats, srcName) {
   let made = null;
   if (!S().fake && S().key) {
     try {
-      const raw = await chat('gm', [{ role: 'system', content: CREATE_RULES + (src ? '\n' + SEQUEL_RULES : '') },
+      const raw = await chat('gm', [{ role: 'system', content: CREATE_RULES + (N <= 10 ? '\n' + SHORT_CREATE : '') + (src ? '\n' + SEQUEL_RULES : '') },
         { role: 'user', content: (src ? sourceWorld(src, srcName) + '\n\nNEW QUESTIONNAIRE:\n' : '') + txt + '\n\nN (total player turns) = ' + N }]);
       made = parseJson(raw);
     } catch (e) { console.warn('curator generation failed, using answers directly', e); }
@@ -1957,7 +2001,8 @@ async function send() {
   stopSpeech(); blip(440); startAmbient();
   if (wasDictated && text && S().cleanDict !== false) text = await cleanDictation(text);
   const hidden = first && !text;
-  if (hidden) text = 'Begin the adventure. Write a cinematic opening of 150-250 words that drops the player into a vivid moment already in motion, rich in sensory detail and atmosphere, honoring the Player\'s Wishes and the bible. Introduce one or two characters with distinct voices and wants of their own, include a touch of specific humour, and end on an unresolved hook. Do not end with a list of options.';
+  if (hidden) text = isShort(A()) ? 'Begin the story. Write a clean, gripping opening of 90-150 words that drops the player into one clear, vivid moment, introduces one character with a distinct voice, and makes the goal obvious. Add a touch of humour and end on a simple, irresistible hook. Do not end with a list of options.'
+    : 'Begin the adventure. Write a cinematic opening of 150-250 words that drops the player into a vivid moment already in motion, rich in sensory detail and atmosphere, honoring the Player\'s Wishes and the bible. Introduce one or two characters with distinct voices and wants of their own, include a touch of specific humour, and end on an unresolved hook. Do not end with a list of options.';
   else addMsg('pl', text);
   $('input').value = '';
   const wait = addMsg('sys', T('The holodeck is thinking...'));
@@ -2038,7 +2083,7 @@ function loadTtsVoice() {
   syncTtsVoiceUI();
 }
 const ttsVoiceValue = () => $('setTtsVoice').value === '__custom' ? ($('setTtsVoiceCustom').value.trim() || defaultVoice()) : $('setTtsVoice').value;
-function loadSettings() { if (S().voiceV !== 1) { delete db.settings.voice; db.settings.voiceV = 1; }   // one-time: switch the fallback browser voice to Microsoft Ana Online (Natural)
+function loadSettings() { if (S().voiceV !== 2) { delete db.settings.voice; delete db.settings.voiceEs; db.settings.voiceV = 2; }   // one-time: forget auto-saved browser voices so the new ranking picks the best one
   if (S().effortV !== 2) { db.settings.effort = ''; db.settings.effortV = 2; }   // one-time: full Pro depth by default
   if (S().ttsV !== 1) { db.settings.ttsEngine = 'gemini'; db.settings.speak = true; db.settings.ttsV = 1; }   // one-time: AI narrator voice and reading aloud are on by default
   $('setEffort').value = S().effort === undefined ? '' : S().effort;
@@ -2063,12 +2108,11 @@ $('impFile').onchange = async e => {
 
 // ---------------- Settings: autosave + diagnostics ----------------
 function collectSettings() {
-  const o = { effort: $('setEffort').value, effortV: 2, ttsV: 1, voiceV: 1, welcomed: true, tune_recent: +$('setTuneRecent').value, tune_chapters: +$('setTuneChapters').value, tune_recall: +$('setTuneRecall').value,
+  const o = { effort: $('setEffort').value, effortV: 2, ttsV: 1, voiceV: 2, welcomed: true, tune_recent: +$('setTuneRecent').value, tune_chapters: +$('setTuneChapters').value, tune_recall: +$('setTuneRecall').value,
     notesModel: $('setNotesModel').value, ttsChunk: +$('setTtsChunk').value, prices: $('setPrices').value.trim() || P().prices, key: $('setKey').value.trim(), base: $('setBase').value.trim(), model: $('setModel').value.trim(), cheap: $('setCheap').value.trim(), fake: $('setFake').checked,
     embed: $('setEmbed').value.trim(), noEmbed: $('setNoEmbed').checked, speak: $('setSpeak').checked, cleanDict: $('setCleanDict').checked, ambient: $('setAmbient').value,
     rate: +$('setRate').value, ttsEngine: $('setEngine').value, ttsVoice: ttsVoiceValue(), ttsModel: $('setTtsModel').value.trim(), ttsStyle: $('setTtsStyle').value.trim() };
-  if ($('setVoice').value) o[voiceKey()] = $('setVoice').value;
-  return o;
+  return o;   // the browser voice is saved only when you pick one (see setVoice below), so a better voice you download later is used automatically
 }
 function keyStatus() {
   const k = S().key;
