@@ -155,9 +155,9 @@
         <div class="grp">
           <b data-i18n="grpEngine">STORY ENGINE</b>
           <label data-i18n="lblEffort">Story thinking effort (lower = faster first word)</label>
-          <div class="row"><select id="setEffort" style="width:100%"><option value="minimal" data-i18n="effMin">Minimal (fastest)</option><option value="low" data-i18n="effLow">Low</option><option value="medium" data-i18n="effMed">Medium</option><option value="high" data-i18n="effHigh">High</option><option value="" data-i18n="effDef">Model default (deepest; recommended for Pro)</option></select></div>
+          <div class="row"><select id="setEffort" style="width:100%"><option value="minimal" data-i18n="effMin">Minimal (fastest)</option><option value="low" data-i18n="effLow">Low (default: good prose, much cheaper)</option><option value="medium" data-i18n="effMed">Medium</option><option value="high" data-i18n="effHigh">High</option><option value="" data-i18n="effDef">Model default (deepest; slowest and most expensive)</option></select></div>
           <label data-i18n="lblNotes">Model for GM secrets and plot notes (every 10 turns)</label>
-          <div class="row"><select id="setNotesModel" style="width:100%"><option value="story" data-i18n="notesStory">Story model (richer twists)</option><option value="cheap" data-i18n="notesCheap">Cheap model (saves credits)</option></select></div>
+          <div class="row"><select id="setNotesModel" style="width:100%"><option value="story" data-i18n="notesStory">Story model (richer twists)</option><option value="cheap" data-i18n="notesCheap">Cheap model (default; saves credits)</option></select></div>
         </div>
         <div class="grp">
           <b data-i18n="grpMemory">MEMORY &amp; PROMPT SIZE</b>
@@ -198,15 +198,15 @@
             <div class="row"><input id="setTtsVoiceCustom" placeholder="Custom voice ID" data-i18n-ph="customVoicePh" style="display:none"></div>
             <label data-i18n="lblTtsModel">Speech model</label>
             <div class="row"><select id="setTtsModel" style="width:100%"></select></div>
-            <label data-i18n="lblChunk">Voice requests per reply (your plan limits requests per day). The first clip is always short for a fast start; later clips grow up to this size.</label>
-            <div class="row"><select id="setTtsChunk" style="width:100%"><option value="700" data-i18n="chunk700">Smoother: about 4 requests per reply</option><option value="2000" data-i18n="chunk2000">Fewest: about 3 requests per reply (default)</option></select></div>
+            <label data-i18n="lblChunk">Voice requests per reply (your plan limits voice requests per day). One request makes the quota last longest, but the voice starts only once the whole reply is written; more requests start sooner.</label>
+            <div class="row"><select id="setTtsChunk" style="width:100%"><option value="one" data-i18n="chunk1">Fewest: 1 request per reply (default; starts when the reply is complete)</option><option value="two" data-i18n="chunk2">2 requests per reply (starts sooner)</option><option value="2000" data-i18n="chunk2000">About 3 requests per reply (quick start)</option><option value="700" data-i18n="chunk700">About 4 requests per reply (smoothest)</option></select></div>
             <label data-i18n="lblStyle">Narration style (how it should be read)</label>
             <div class="row"><textarea id="setTtsStyle" rows="4" style="width:100%"></textarea></div>
           </div>
         </div>
         <div class="grp">
           <b data-i18n="grpBrowserVoice">BROWSER VOICE (FALLBACK)</b>
-          <p class="tag" data-i18n="browserVoiceHelp">Used when the AI narrator voice is off, unavailable or out of credits, or when your provider has none. The best voice your device offers is picked automatically (marked ★): Microsoft Ana Online (Natural) in English on Edge, and a Costa Rican or Latin American voice in Spanish. On iPhone and iPad, download an Enhanced or Premium voice in Settings &gt; Accessibility &gt; Spoken Content &gt; Voices (for example Ava, or Paulina for Spanish) for a far less robotic sound. Pick a voice here to override; each language remembers its own.</p>
+          <p class="tag" data-i18n="browserVoiceHelp">Used when the AI narrator voice is off, unavailable or out of credits, or when your provider has none. The best voice your device offers is picked automatically (marked ★): Microsoft Ana Online (Natural) in English on Edge, and a Costa Rican or Latin American voice in Spanish. On iPhone and iPad, web pages can only use Apple's basic built-in voices (downloaded Enhanced or Premium voices are not available to Safari), so the AI narrator sounds far better there. Pick a voice here to override; each language remembers its own.</p>
           <label data-i18n="lblVoice">Voice</label>
           <div class="row"><select id="setVoice" style="width:100%"></select></div>
           <label><span data-i18n="lblSpeed">Speed</span> <input type="range" id="setRate" min="0.7" max="1.4" step="0.05" value="1" style="width:100%"></label>
@@ -320,8 +320,8 @@ const ESH = {
   lblEmbed: 'Modelo de embeddings (recuerdo más inteligente; mismo proveedor y clave)', noEmbed: 'Desactivar embeddings (solo memoria por palabras clave)',
   grpTesting: 'PRUEBAS', fakeMode: 'Modo de prueba sin conexión (IA simulada, sin llamadas a la API)',
   grpEngine: 'MOTOR DE LA HISTORIA', lblEffort: 'Esfuerzo de razonamiento (menos = la primera palabra llega antes)',
-  effMin: 'Mínimo (más rápido)', effLow: 'Bajo', effMed: 'Medio', effHigh: 'Alto', effDef: 'Predeterminado del modelo (más profundo; recomendado para Pro)',
-  lblNotes: 'Modelo para los secretos del Director y las notas de la trama (cada 10 turnos)', notesStory: 'Modelo de la historia (giros más ricos)', notesCheap: 'Modelo económico (ahorra créditos)',
+  effMin: 'Mínimo (más rápido)', effLow: 'Bajo (predeterminado: buena prosa, mucho más barato)', effMed: 'Medio', effHigh: 'Alto', effDef: 'Predeterminado del modelo (más profundo; más lento y más caro)',
+  lblNotes: 'Modelo para los secretos del Director y las notas de la trama (cada 10 turnos)', notesStory: 'Modelo de la historia (giros más ricos)', notesCheap: 'Modelo económico (predeterminado; ahorra créditos)',
   grpMemory: 'MEMORIA Y TAMAÑO DEL PROMPT', memHelp: 'Equilibre el costo y la continuidad.',
   lblRecent: 'Turnos recientes enviados tal cual (2 por intercambio)', o4: '4 (más barato)', o8: '8 (predeterminado)', o12: '12 (original)', o16: '16 (el más rico)', o6: '6 (predeterminado)',
   lblChapters: 'Resúmenes de capítulos en el prompt', lblRecall: 'Recuerdos rescatados por turno',
@@ -334,11 +334,12 @@ const ESH = {
   grpDict: 'DICTADO', cleanDict: 'Limpiar los mensajes de manos libres antes de enviarlos (corrige palabras mal oídas y muletillas con el contexto de la historia; una llamada rápida al modelo económico)',
   grpAiVoice: 'VOZ DEL NARRADOR CON IA', aiVoiceNone: 'Su proveedor no tiene voz de narrador aquí, así que las respuestas se leen con la voz del navegador (abajo).',
   lblTtsVoice: 'Voz del narrador', customVoicePh: 'ID de voz personalizada', lblTtsModel: 'Modelo de voz',
-  lblChunk: 'Solicitudes de voz por respuesta (su plan limita las solicitudes por día). El primer fragmento siempre es corto para empezar rápido; los siguientes crecen hasta este tamaño.',
-  chunk700: 'Más fluido: unas 4 solicitudes por respuesta', chunk2000: 'Menos solicitudes: unas 3 por respuesta (predeterminado)',
+  lblChunk: 'Solicitudes de voz por respuesta (su plan limita las solicitudes de voz por día). Una sola solicitud hace que la cuota dure más, pero la voz empieza hasta que la respuesta está completa; con más solicitudes empieza antes.',
+  chunk1: 'Lo mínimo: 1 solicitud por respuesta (predeterminado; empieza cuando la respuesta está completa)', chunk2: '2 solicitudes por respuesta (empieza antes)',
+  chunk2000: 'Unas 3 solicitudes por respuesta (empieza rápido)', chunk700: 'Unas 4 solicitudes por respuesta (la más fluida)',
   lblStyle: 'Estilo de narración (cómo debe leerse)',
   grpBrowserVoice: 'VOZ DEL NAVEGADOR (RESPALDO)',
-  browserVoiceHelp: 'Se usa cuando la voz con IA está apagada, no disponible o sin créditos, o cuando su proveedor no tiene voz. Se elige sola la mejor voz que ofrece su dispositivo (marcada con ★): en español, una voz de Costa Rica o de Latinoamérica; en inglés, Microsoft Ana Online (Natural) en Edge. En el iPhone o iPad, descargue una voz «Mejorada» o «Premium» en Ajustes &gt; Accesibilidad &gt; Contenido leído &gt; Voces (por ejemplo Paulina en español) para un sonido mucho menos robótico. Elija una voz aquí si prefiere otra; cada idioma recuerda la suya.',
+  browserVoiceHelp: 'Se usa cuando la voz con IA está apagada, no disponible o sin créditos, o cuando su proveedor no tiene voz. Se elige sola la mejor voz que ofrece su dispositivo (marcada con ★): en español, una voz de Costa Rica o de Latinoamérica; en inglés, Microsoft Ana Online (Natural) en Edge. En el iPhone o iPad, las páginas web solo pueden usar las voces básicas de Apple (las voces «Mejoradas» o «Premium» descargadas no están disponibles para Safari), así que ahí el narrador con IA suena mucho mejor. Elija una voz aquí si prefiere otra; cada idioma recuerda la suya.',
   lblVoice: 'Voz', lblSpeed: 'Velocidad',
   grpAmbient: 'SONIDO DE FONDO', lblAmbient: 'Sonido mientras se prepara la historia',
   amb0: 'Predeterminado (fondo suave en manos libres; si no, apagado)', ambCalm: 'Fondo suave', ambAuto: 'Según la escena', ambWaves: 'Olas del mar', ambRain: 'Lluvia', ambWind: 'Viento', ambOff: 'Apagado',
@@ -398,7 +399,8 @@ const ES = {
   'The model declined to write this part of the story. Try rephrasing your action, or choose another model in Settings.': 'El modelo se negó a escribir esta parte de la historia. Intente decir su acción de otra forma o elija otro modelo en Ajustes.',
   'The model returned an empty reply.': 'El modelo devolvió una respuesta vacía.',
   // usage bar
-  'Last turn: story {i} in / {o} out': 'Último turno: historia {i} entrada / {o} salida', '{n} thinking': '{n} razonando', 'voice {s}s': 'voz {s} s',
+  'Last turn: story {i} in / {o} out': 'Último turno: historia {i} entrada / {o} salida',
+  'Last turn: story {i} in ({c} cached) / {o} out': 'Último turno: historia {i} entrada ({c} en caché) / {o} salida', '{n} thinking': '{n} razonando', 'voice {s}s': 'voz {s} s',
   'Adventure: ~${t} (story {s}, memory {m}, voice {v})': 'Aventura: ~${t} (historia {s}, memoria {m}, voz {v})',
   'Free-tier key: Google does not bill these calls': 'Clave gratuita: Google no cobra estas llamadas',
   // engine
@@ -415,7 +417,7 @@ const ES = {
   'person': 'persona', 'place': 'lugar', 'item': 'objeto', 'faction': 'facción', 'other': 'otro',
   // voice
   'Narrator voice unavailable ({msg}). Using the browser voice instead.': 'La voz del narrador no está disponible ({msg}). Se usará la voz del navegador.',
-  'For a much better voice on iPhone or iPad, download an Enhanced or Premium voice in Settings > Accessibility > Spoken Content > Voices (for example Ava in English or Paulina in Spanish), then reload this page.': 'Para una voz mucho mejor en el iPhone o iPad, descargue una voz «Mejorada» o «Premium» en Ajustes > Accesibilidad > Contenido leído > Voces (por ejemplo Paulina en español o Ava en inglés) y vuelva a cargar esta página.',
+  'The narrator voice has reached its limit for now, so the browser voice reads the story instead.': 'La voz del narrador llegó a su límite por ahora, así que la voz del navegador lee la historia.',
   'Tap anywhere to hear the narrator (this browser needs a tap before it plays sound).': 'Toque en cualquier parte para oír al narrador (este navegador necesita un toque antes de reproducir sonido).',
   '(speech not supported in this browser)': '(este navegador no tiene voz)', 'Custom voice ID...': 'ID de voz personalizada...',
   'Hands-free': 'Manos libres', 'Hands-free ON': 'Manos libres ACTIVO', 'Say "{phrase}" to send': 'Diga «{phrase}» para enviar', 'What do you do?': '¿Qué hace usted?',
@@ -494,18 +496,18 @@ const KEY = 'holodeck.v2';
 // The model lists are starting points: "Test connection" lists what a key can really use and swaps in available models if a default is missing.
 const PROVIDERS = {
   gemini: { name: 'Google Gemini', base: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-3.1-pro-preview', cheap: 'gemini-3.8-flash', embed: 'gemini-embedding-2-preview',
-    models: ['gemini-3.1-pro-preview', 'gemini-3.8-flash'], embeds: ['gemini-embedding-2-preview'], tts: 'gemini', ttsModels: ['gemini-3.8-flash-tts'], prices: '2,12,0.5,3,10',
+    models: ['gemini-3.1-pro-preview', 'gemini-3.8-flash'], embeds: ['gemini-embedding-2-preview'], tts: 'gemini', ttsModels: ['gemini-3.8-flash-tts'], prices: '2,12,0.5,3,10', cacheRate: 0.25,
     keyUrl: 'https://aistudio.google.com/apikey', keyPh: 'AIza...', chat: /^gemini/, notChat: /embed|tts|image|live|audio|vision/, pick: { model: [/pro/], cheap: [/flash(?!.*lite)/, /flash/] } },
   openai: { name: 'OpenAI (ChatGPT models)', base: 'https://api.openai.com/v1', model: 'gpt-5', cheap: 'gpt-5-mini', embed: 'text-embedding-3-small',
-    models: ['gpt-5', 'gpt-5-mini'], embeds: ['text-embedding-3-small'], tts: 'openai', ttsModels: ['gpt-4o-mini-tts'], prices: '1.25,10,0.25,2,12',
+    models: ['gpt-5', 'gpt-5-mini'], embeds: ['text-embedding-3-small'], tts: 'openai', ttsModels: ['gpt-4o-mini-tts'], prices: '1.25,10,0.25,2,12', cacheRate: 0.1,
     keyUrl: 'https://platform.openai.com/api-keys', keyPh: 'sk-...', chat: /^(gpt|o\d|chatgpt)/, notChat: /embed|tts|audio|realtime|transcribe|image|search|dall-e|whisper|moderation|codex/, pick: { model: [/^gpt-5(\.\d+)?$/, /^gpt-5/], cheap: [/^gpt-5(\.\d+)?-mini$/, /mini/] } },
   anthropic: { name: 'Anthropic (Claude)', base: 'https://api.anthropic.com/v1', model: 'claude-opus-5-5', cheap: 'claude-haiku-4-5', embed: '',
-    models: ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-4-5'], embeds: [], tts: '', ttsModels: [], prices: '4,20,1,5,0',
+    models: ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-4-5'], embeds: [], tts: '', ttsModels: [], prices: '4,20,1,5,0', cacheRate: 0.1,
     keyUrl: 'https://console.anthropic.com/settings/keys', keyPh: 'sk-ant-...', chat: /^claude/, notChat: /$^/, pick: { model: [/^claude-opus/, /^claude-sonnet/], cheap: [/^claude-haiku/, /^claude-sonnet/] } },
   xai: { name: 'xAI (Grok)', base: 'https://api.x.ai/v1', model: 'grok-4', cheap: 'grok-3-mini', embed: '',
-    models: ['grok-4', 'grok-3-mini'], embeds: [], tts: '', ttsModels: [], prices: '3,15,0.3,0.5,0',
+    models: ['grok-4', 'grok-3-mini'], embeds: [], tts: '', ttsModels: [], prices: '3,15,0.3,0.5,0', cacheRate: 0.25,
     keyUrl: 'https://console.x.ai', keyPh: 'xai-...', chat: /^grok/, notChat: /image|vision|imagine/, pick: { model: [/^grok-4(\.\d+)?$/, /^grok-4/], cheap: [/mini/, /fast/] } },
-  custom: { name: 'Other (OpenAI-compatible: OpenRouter, local...)', base: '', model: '', cheap: '', embed: '', models: [], embeds: [], tts: '', ttsModels: [], prices: '1,4,0.2,0.8,0',
+  custom: { name: 'Other (OpenAI-compatible: OpenRouter, local...)', base: '', model: '', cheap: '', embed: '', models: [], embeds: [], tts: '', ttsModels: [], prices: '1,4,0.2,0.8,0', cacheRate: 0.5,
     keyUrl: 'https://openrouter.ai/keys', keyPh: '', chat: /./, notChat: /embed|tts|whisper|image/, pick: { model: [], cheap: [] } }
 };
 const PROV_NOTES = {
@@ -652,7 +654,10 @@ function anthropicBody(model, messages, o) {
   if (!msgs.length || msgs[0].role !== 'user') msgs.unshift({ role: 'user', content: '(The story continues.)' });
   const parts = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n').split(CACHE_BREAK).map(s => s.trim()).filter(Boolean);
   const body = { model, max_tokens: 16000, messages: msgs };
-  if (parts.length) body.system = parts.map((text, i) => Object.assign({ type: 'text', text }, o.cache && i === 0 && parts.length > 1 ? { cache_control: { type: 'ephemeral' } } : {}));
+  const mark = { cache_control: { type: 'ephemeral' } };
+  if (parts.length) body.system = parts.map((text, i) => Object.assign({ type: 'text', text }, o.cache && i === parts.length - 1 ? mark : {}));
+  // Two cache points for the story: the end of the system prompt and the end of the conversation history (everything before this turn's briefing).
+  const hist = msgs[msgs.length - 2]; if (o.cache && hist) hist.content = [Object.assign({ type: 'text', text: hist.content }, mark)];
   if (o.stream) body.stream = true;
   const eff = antEffort(o.effort); if (eff && !/haiku/.test(model)) body.output_config = { effort: eff };   // Haiku 4.5 does not take effort
   return body;
@@ -683,7 +688,8 @@ async function tryVariants(model, variants, messages) {
   }
   return r;
 }
-const antUsage = u => u ? { prompt_tokens: Math.round((u.input_tokens || 0) + 1.25 * (u.cache_creation_input_tokens || 0) + 0.1 * (u.cache_read_input_tokens || 0)), completion_tokens: u.output_tokens || 0 } : null;   // cache writes cost 1.25x, reads 0.1x
+// Anthropic usage in the OpenAI shape: cache writes cost 1.25x (folded into the input count); cache reads are reported as cached tokens.
+const antUsage = u => u ? { prompt_tokens: Math.round((u.input_tokens || 0) + 1.25 * (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0)), completion_tokens: u.output_tokens || 0, prompt_tokens_details: { cached_tokens: u.cache_read_input_tokens || 0 } } : null;
 const REFUSAL = 'The model declined to write this part of the story. Try rephrasing your action, or choose another model in Settings.';
 function readReply(j) {   // -> { text, usage } in the OpenAI usage shape the meter understands
   if (isAnt()) {
@@ -733,7 +739,7 @@ async function chat(tag, messages) {
   if (S().fake) return fake(tag, messages);
   if (!S().key) throw new Error(T('Set your API key in Settings (or enable offline test mode).'));
   messages = withLang(messages);
-  const bigModel = tag === 'gm' || tag === 'final' || (tag === 'plan' && S().notesModel !== 'cheap');   // GM notes can be moved to the cheap model in Settings
+  const bigModel = tag === 'gm' || tag === 'final' || (tag === 'plan' && S().notesModel === 'story');   // GM notes run on the cheap model unless Settings says otherwise
   const eff = tag === 'gm' ? '' : tag === 'plan' || tag === 'final' ? 'low' : 'minimal';   // background calls do not need deep thinking
   const variants = isAnt() ? [{ effort: eff, fallback: true }, { effort: eff }, {}] : eff ? [{ effort: eff }, {}] : [{}];
   const { r, model } = await quotaRetry(bigModel ? storyModel() : cheapModel(), bigModel, m => tryVariants(m, variants, messages));
@@ -747,17 +753,19 @@ function recordUsage(kind, u, big, audioSec) {
   const a = A(); if (!a) return;
   const t = a.usage = a.usage || {}, k = t[kind] = t[kind] || { n: 0, i: 0, o: 0, th: 0, s: 0, big: !!big };
   k.n++; k.big = !!big; k.s += audioSec || 0;
-  if (u) { const inn = u.prompt_tokens || 0, out = Math.max(u.completion_tokens || 0, (u.total_tokens || 0) - inn), th = out - (u.completion_tokens || 0); k.i += inn; k.o += out; k.th += Math.max(th, (u.completion_tokens_details && u.completion_tokens_details.reasoning_tokens) || 0); }
+  if (u) { const inn = u.prompt_tokens || 0, out = Math.max(u.completion_tokens || 0, (u.total_tokens || 0) - inn), th = out - (u.completion_tokens || 0); k.i += inn; k.o += out; k.th += Math.max(th, (u.completion_tokens_details && u.completion_tokens_details.reasoning_tokens) || 0);
+    k.c = (k.c || 0) + Math.min(inn, (u.prompt_tokens_details && u.prompt_tokens_details.cached_tokens) || 0); }   // input the provider served from its cache
   showUsage(); clearTimeout(usageTimer); usageTimer = setTimeout(() => persist(), 1500);
 }
 let usageTimer = null;
 // USD per 1M tokens: story in, story out, cheap in, cheap out, audio out. Each provider has its own defaults; estimates only, edit them in Settings.
 function priceList() { const p = String(S().prices || P().prices).split(',').map(x => parseFloat(x) || 0); return { sIn: p[0], sOut: p[1], cIn: p[2], cOut: p[3], aOut: p[4] }; }
 function usageCost(u) {   // returns { total, story, bg, voice } in dollars
-  const p = priceList(), r = { story: 0, bg: 0, voice: 0 };
+  const p = priceList(), r = { story: 0, bg: 0, voice: 0 }, rate = P().cacheRate;
+  const inTok = k => (k.i - (k.c || 0)) + (k.c || 0) * rate;   // cached input is billed at a fraction of the normal price
   Object.entries(u || {}).forEach(([kind, k]) => {
     if (kind === 'voice') r.voice += k.s * 25 / 1e6 * p.aOut;
-    else { const c = k.big ? (k.i * p.sIn + k.o * p.sOut) / 1e6 : (k.i * p.cIn + k.o * p.cOut) / 1e6; if (kind === 'gm') r.story += c; else r.bg += c; }
+    else { const c = k.big ? (inTok(k) * p.sIn + k.o * p.sOut) / 1e6 : (inTok(k) * p.cIn + k.o * p.cOut) / 1e6; if (kind === 'gm') r.story += c; else r.bg += c; }
   });
   r.total = r.story + r.bg + r.voice; return r;
 }
@@ -767,9 +775,9 @@ function showUsage() {
   const a = A(), el = $('usageBar'); if (!a || !a.usage || !el) { if (el) el.textContent = ''; return; }
   const u = a.usage, tot = usageCost(u); if (!usageBase || usageBase.__adv !== db.current) usageBase = Object.assign(JSON.parse(JSON.stringify(u)), { __adv: db.current });
   const b = usageBase, g = u.gm || { i: 0, o: 0, th: 0 }, g0 = b.gm || { i: 0, o: 0, th: 0 };
-  const dn = Object.keys(u).reduce((o, k) => { const x = u[k], y = b[k] || { i: 0, o: 0, th: 0, s: 0, n: 0, big: x.big }; o[k] = { i: x.i - y.i, o: x.o - y.o, th: x.th - y.th, s: x.s - y.s, n: x.n - y.n, big: x.big }; return o; }, {});
-  const last = usageCost(dn);
-  el.textContent = T('Last turn: story {i} in / {o} out', { i: kfmt(g.i - g0.i), o: kfmt(g.o - g0.o) }) + (g.th - g0.th > 0 ? ' (' + T('{n} thinking', { n: kfmt(g.th - g0.th) }) + ')' : '') +
+  const dn = Object.keys(u).reduce((o, k) => { const x = u[k], y = b[k] || { i: 0, o: 0, th: 0, s: 0, n: 0, c: 0, big: x.big }; o[k] = { i: x.i - y.i, o: x.o - y.o, th: x.th - y.th, s: x.s - y.s, n: x.n - y.n, c: (x.c || 0) - (y.c || 0), big: x.big }; return o; }, {});
+  const last = usageCost(dn), gc = (g.c || 0) - (g0.c || 0);
+  el.textContent = T(gc > 0 ? 'Last turn: story {i} in ({c} cached) / {o} out' : 'Last turn: story {i} in / {o} out', { i: kfmt(g.i - g0.i), c: kfmt(gc), o: kfmt(g.o - g0.o) }) + (g.th - g0.th > 0 ? ' (' + T('{n} thinking', { n: kfmt(g.th - g0.th) }) + ')' : '') +
     (dn.voice && dn.voice.s ? ' | ' + T('voice {s}s', { s: Math.round(dn.voice.s) }) : '') + ' | ~$' + last.total.toFixed(3) +
     '  ||  ' + T('Adventure: ~${t} (story {s}, memory {m}, voice {v})', { t: tot.total.toFixed(2), s: tot.story.toFixed(2), m: tot.bg.toFixed(2), v: tot.voice.toFixed(2) }) +
     (S().freeTier ? '  ||  ' + T('Free-tier key: Google does not bill these calls') : '');
@@ -783,7 +791,7 @@ async function chatStream(messages, onDelta) {
   }
   if (!S().key) throw new Error(T('Set your API key in Settings (or enable offline test mode).'));
   messages = withLang(messages);
-  const effort = S().effort === undefined ? '' : S().effort;   // thinking models can take many seconds before the first token; low effort cuts that a lot
+  const effort = S().effort === undefined ? 'low' : S().effort;   // thinking is billed as output; low effort cuts cost and the wait for the first word
   const variants = (isAnt() ? [{ effort, fallback: true, cache: true }, { effort, cache: true }, { cache: true }, {}]
     : [[effort, true], [effort === 'minimal' ? 'low' : effort, true], [effort, false], ['', false]].map(([e, u]) => ({ effort: e, usage: u }))).map(v => Object.assign(v, { stream: true }));
   const { r, model } = await quotaRetry(storyModel(), true, m => tryVariants(m, variants, messages));
@@ -821,7 +829,7 @@ function streamText(o, st) {   // one server-sent event -> new text; usage and s
   return (o.choices && o.choices[0] && o.choices[0].delta && o.choices[0].delta.content) || '';
 }
 function fake(tag, m) {
-  const last = m[m.length - 1].content, es = LANG() === 'es';
+  const last = String(m[m.length - 1].content).split(/\n(?:THE PLAYER|INSTRUCTION): /).pop(), es = LANG() === 'es';   // just the action, not the private briefing
   if (tag === 'gm') return es ? '[Director de prueba] El holodeck zumba. Usted dijo: "' + last.slice(0, 120) + '". Una figura encapuchada, la capitana Mara, lo observa desde la taberna El Ancla Oxidada.'
     : '[fake GM] The holodeck hums. You said: "' + last.slice(0, 120) + '". A hooded figure named Captain Mara watches from the Rusty Anchor tavern.';
   if (tag === 'options') return JSON.stringify({ options: es ? ['Opción de prueba A', 'Opción de prueba B', 'Opción de prueba C', 'Opción de prueba D'] : ['Fake option A', 'Fake option B', 'Fake option C', 'Fake option D'] });
@@ -901,7 +909,9 @@ async function takeTurn(input, hidden, onDelta) {
   holoStage = T('finishing memory update');
   await Promise.race([memoryJob, new Promise(res => setTimeout(res, 2000))]);   // never let the memory update hold up the story for long
   const a = A(), tr = a.transcript;
-  const recentStart = Math.max(0, tr.length - RECENT_N());
+  // The verbatim window moves in steps of two exchanges instead of every turn, so the conversation part of the prompt repeats exactly
+  // from one turn to the next and providers can bill it as cached input.
+  const over = Math.max(0, tr.length - RECENT_N()), recentStart = over - (over % 4);
   const snap = snapshot(a);
   // Hand edits to the bible since the GM last saw it become PLAYER CHANGES (a line diff, so the model knows exactly what changed).
   if (a.bibleSeen == null) { if (a.bibleEdited) noteChange(a, 'Story bible: the player edited the bible by hand; treat it as authoritative.'); }
@@ -914,16 +924,19 @@ async function takeTurn(input, hidden, onDelta) {
   const mem = memList.map(x => '- ' + x).join('\n') || '(none)';
   const changes = liveChanges(a);
   const chapters = (a.chunks || []).slice(-tune('chapters')).map(c => '- Turns ' + c.from + '-' + c.to + ': ' + c.text).join('\n') || '(none yet)';
-  // Prompt order is deliberate: the parts that rarely change come first (rules, bible, chapters, GM notes) so the API can reuse its
-  // prefix cache; the parts that change every turn (map, memories, director notes) come after CACHE_BREAK.
+  // Prompt order is deliberate, for the providers' prompt caches: everything that rarely changes (rules, bible, chapters, GM notes) is the
+  // system message, then the conversation; only the last message changes every turn. It carries this turn's private briefing (map, recalled
+  // memories, director notes, hand changes) followed by the player's action, and is not stored, so earlier turns stay byte-for-byte identical.
   const system = GM_RULES + (isShort(a) ? '\n' + shortRules(a) : '') + '\n\n## STORY BIBLE\n' + a.bible +
     (pinned.length ? '\n\n## PLAYER-SET FACTS (written by the player; they override earlier narration, lore and notes)\n' + pinnedLines.map(x => '- ' + x).join('\n') : '') +
-    '\n\n## STORY SO FAR (chapter summaries)\n' + chapters + '\n\n## PRIVATE GM NOTES (never reveal outright)\n' + gmText(a) + CACHE_BREAK +
-    '## MISSION MAP\n' + mapText(a) + '\n## RELEVANT MEMORIES\n' + mem + '\n\n## DIRECTOR NOTES FOR THIS REPLY (private; do not mention)\n' + directorNotes(a) +
-    (changes.length ? '\n\n## PLAYER CHANGES (made by hand; they win over anything said earlier in this conversation. Apply them from this reply on as if they had always been true, e.g. new pronouns or descriptions, and do not comment on the change)\n' + changes.map(c => '- ' + c.text).join('\n') : '');
+    '\n\n## STORY SO FAR (chapter summaries)\n' + chapters + '\n\n## PRIVATE GM NOTES (never reveal outright)\n' + gmText(a) +
+    '\n\n## HOW EACH TURN ARRIVES\nThe latest message starts with a private GAME MASTER BRIEFING for this reply only (mission map, recalled memories, director notes, player changes), then the player\'s action. Follow the briefing, never mention or quote it, and reply to the action.';
+  const briefing = '[GAME MASTER BRIEFING: private, for this reply only]\n## MISSION MAP\n' + mapText(a) + '\n## RELEVANT MEMORIES\n' + mem + '\n\n## DIRECTOR NOTES FOR THIS REPLY\n' + directorNotes(a) +
+    (changes.length ? '\n\n## PLAYER CHANGES (made by hand; they win over anything said earlier in this conversation. Apply them from this reply on as if they had always been true, e.g. new pronouns or descriptions, and do not comment on the change)\n' + changes.map(c => '- ' + c.text).join('\n') : '') +
+    '\n[END OF BRIEFING]\n\n' + (hidden ? 'INSTRUCTION: ' : 'THE PLAYER: ') + input;
   const messages = [{ role: 'system', content: system }];
   tr.slice(recentStart).forEach(t => messages.push({ role: t.role === 'player' ? 'user' : 'assistant', content: t.text }));
-  messages.push({ role: 'user', content: input });
+  messages.push({ role: 'user', content: briefing });
   const reply = onDelta ? await chatStream(messages, onDelta) : await chat('gm', messages);
   const name = db.current; a.undo = snap; a.bibleEdited = false; a.bibleSeen = bibleNow;
   if (!hidden) tr.push({ n: tr.length + 1, role: 'player', text: input });
@@ -1043,8 +1056,23 @@ async function retrieve(a, input, recentStart) {
   }
   const score = new Map();   // reciprocal rank fusion of keyword + semantic rankings
   [lex, sem].forEach(list => list.forEach((d, i) => score.set(d, (score.get(d) || 0) + 1 / (60 + i))));
-  const top = [...score.entries()].sort((x, y) => y[1] - x[1]).slice(0, tune('recall')).map(x => x[0].text).filter(x => !hits.includes(x));
-  return [...hits, ...top];
+  const qt = new Set(tok(query));
+  const top = [...score.entries()].sort((x, y) => y[1] - x[1]).slice(0, tune('recall')).map(x => brief(x[0], qt)).filter(x => !hits.includes(x));
+  const out = []; let room = RECALL_CHARS;   // keep the recalled block small (about 650 tokens); named lore comes first
+  for (const x of [...hits, ...top]) { if (out.length && x.length > room) break; out.push(x); room -= x.length; }
+  return out;
+}
+const RECALL_CHARS = 2600;
+// An old turn is recalled as its most relevant sentence or two (with the next one for context), not the whole reply: that was the biggest
+// single part of each prompt. Lore lines and chapter summaries are already short and are recalled whole.
+function brief(d, qt) {
+  if (!d.id.startsWith('T:')) return d.text;
+  const i = d.text.indexOf(': '), head = d.text.slice(0, i + 1), sents = d.text.slice(i + 2).split(/(?<=[.!?…])\s+/);
+  if (sents.join(' ').split(/\s+/).length <= 60) return d.text;
+  const hit = s => tok(s).filter(w => qt.has(w)).length;
+  let b = 0; sents.forEach((s, k) => { if (hit(s) > hit(sents[b])) b = k; });
+  const pick = [sents[b]]; if (sents[b + 1] && (sents[b] + sents[b + 1]).split(/\s+/).length <= 70) pick.push(sents[b + 1]);
+  return head + ' ...' + pick.join(' ') + '...';
 }
 
 // ---------------- Showrunner + Director: the hidden layer that keeps the story alive ----------------
@@ -1263,7 +1291,9 @@ function voiceScore(v) {
 }
 const rankedVoices = () => speechSynthesis.getVoices().filter(v => voiceScore(v) >= 0).sort((a, b) => voiceScore(b) - voiceScore(a) || a.name.localeCompare(b.name));
 const voiceKey = () => LANG() === 'es' ? 'voiceEs' : 'voice';   // each language remembers its own browser voice (only when you pick one)
+let voiceSuspect = false;   // set when a voice stayed silent on iPhone/iPad: fall back to Safari's own default voice for the language
 function browserVoice() {
+  if (voiceSuspect) return null;
   const want = S()[voiceKey()];
   return speechSynthesis.getVoices().find(v => v.name === want) || rankedVoices()[0] || null;
 }
@@ -1299,7 +1329,7 @@ function stopSpeech() { blockedPlay = null; if (TTS) speechSynthesis.cancel(); i
 // because Safari relaxes the rule while the microphone is in use.
 const player = new Audio(); player.setAttribute('playsinline', ''); player.preload = 'auto';
 const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);   // iPadOS reports itself as a Mac
-let audioUnlocked = false, blockedPlay = null, silentUrl = null, ttsPrimed = false;
+let audioUnlocked = false, blockedPlay = null, silentUrl = null, speechHeard = false;
 function unlockAudio() {
   ensureAudio();   // the AudioContext (ambient sound, blips) needs a tap too
   if (blockedPlay) { const f = blockedPlay; blockedPlay = null; f(); return; }   // a clip was refused: this tap plays it
@@ -1307,7 +1337,7 @@ function unlockAudio() {
     silentUrl = silentUrl || URL.createObjectURL(wavFromPcm(new Uint8Array(4800), 24000));   // 0.1 s of silence
     player.onended = player.onerror = null; player.src = silentUrl; player.play().then(() => { audioUnlocked = true; }, () => {});
   }
-  if (IOS && TTS && !ttsPrimed) { ttsPrimed = true; try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) {} }   // same rule for the browser voice
+  if (IOS && TTS && !speechHeard && !speechSynthesis.speaking) { try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) {} }   // same rule for the browser voice; repeated on each tap until speech has worked once
 }
 ['touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, unlockAudio, true));
 function playClip(fail) {   // plays whatever is loaded in the shared player; if the browser still refuses, waits for the next tap
@@ -1356,17 +1386,19 @@ async function openaiTTS(text) {   // OpenAI's speech endpoint; "instructions" c
 // Same interface as the browser speaker (push / end / done callback). Sends the first sentence immediately for a fast start,
 // then paragraph-sized pieces (better flow), requesting the next audio while the current piece is playing.
 function makeAiSpeaker(done) {
-  // Chunk sizes GROW: a short first piece (fast start), then each piece is ~3x larger, up to the Settings cap. Each piece is requested as soon as it is
-  // complete, so the next clip is normally ready before the current one finishes (no mid-reply gaps) while the total request count stays low.
+  // Settings > Voice requests per reply: "one" sends the whole reply in a single request once it is complete (fewest requests, slower start);
+  // "two" sends a short first piece, then the rest. Otherwise chunk sizes GROW: a short first piece (fast start), then each piece is ~3x larger,
+  // up to the cap. Each piece is requested as soon as it is complete, so the next clip is normally ready before the current one finishes.
+  const mode = String(S().ttsChunk || 'one');
   let buf = '', pend = '', q = [], ended = false, fired = false, playing = false, next = 0, target = 130, stopped = false, audio = null;
   const clean = t => t.replace(/[*_#>`]/g, '').replace(/\s+/g, ' ').trim();
   const warn = e => { if (voiceWarned) return; voiceWarned = true; console.warn(e);
-    addMsg('sys', T('Narrator voice unavailable ({msg}). Using the browser voice instead.', { msg: String(e.message).slice(0, 140) }) + (IOS && TTS && !goodVoice(browserVoice()) ? ' ' + T(IOS_VOICE_TIP) : '')); };
+    addMsg('sys', /HTTP 429/.test(e.message) ? T('The narrator voice has reached its limit for now, so the browser voice reads the story instead.') : T('Narrator voice unavailable ({msg}). Using the browser voice instead.', { msg: String(e.message).slice(0, 140) })); };
   function flush() {
-    const t = clean(pend); pend = ''; if (!t) return; target = Math.min(target * 3, Math.max(400, +S().ttsChunk || 2000));
+    const t = clean(pend); pend = ''; if (!t) return; target = Math.min(target * 3, Math.max(400, +mode || 2000));
     q.push({ text: t, p: aiTTS(t).then(url => ({ url }), err => ({ err })) }); pump();
   }
-  function add(s) { pend += (pend ? ' ' : '') + s; if (pend.length >= target) flush(); }
+  function add(s) { pend += (pend ? ' ' : '') + s; if (mode === 'one' || (mode === 'two' && q.length)) return; if (pend.length >= target) flush(); }
   function pump() {
     if (stopped || playing) return;
     const it = q[next];
@@ -1401,21 +1433,36 @@ function speakBrowser(text, done, force) {
   parts.forEach((p, i) => {
     const u = new SpeechSynthesisUtterance(p);
     if (voice) u.voice = voice; u.lang = utterLang(voice);
-    u.rate = +S().rate || 1;
+    u.rate = +S().rate || 1; u.onstart = () => { speechHeard = true; };
     if (i === parts.length - 1) u.onend = u.onerror = () => { if (done) done(); };
     speechSynthesis.speak(u);
   });
 }
 // Speaks a reply sentence-by-sentence while it is still streaming in, so audio starts after the first sentence.
+// iPhone/iPad Safari can stay silent without any error: speech that starts outside a tap (e.g. when the AI voice runs out mid-story) may be
+// refused, and a voice it lists may be unusable. Then nothing ever finishes and hands-free waits forever. So: if nothing has started after
+// 5 s, stop waiting, let the next tap read the reply (inside a tap Safari always allows speech), and use Safari's default voice from then on.
 function makeBrowserSpeaker(done) {
-  let buf = '', pending = 0, ended = false, fired = false;
-  const finish = () => { if (ended && pending === 0 && !fired) { fired = true; if (done) done(); } };
+  let buf = '', pending = 0, ended = false, fired = false, started = false, silent = false, dog = null;
+  const said = [];
+  const finish = () => { if (ended && pending <= 0 && !fired) { fired = true; clearTimeout(dog); if (done) done(); } };
+  const watch = () => {
+    if (started || fired) return;
+    silent = true; if (IOS) voiceSuspect = true; pending = 0;
+    try { speechSynthesis.cancel(); } catch (e) {}
+    voiceStatus(T('Tap anywhere to hear the narrator (this browser needs a tap before it plays sound).'), true);
+    blockedPlay = () => { if (!handsActive) voiceStatus(''); speakBrowser(said.join(' '), null, true); };
+    finish();
+  };
   const say = t => {
     t = String(t).replace(/[*_#>`]/g, '').replace(/\s+/g, ' ').trim(); if (!t) return;
+    said.push(t); if (silent) return;
     const u = new SpeechSynthesisUtterance(t), v = browserVoice();
     if (v) u.voice = v; u.lang = utterLang(v); u.rate = +S().rate || 1;
-    pending++; u.onstart = stopAmbient; u.onend = u.onerror = () => { pending--; finish(); };
+    pending++; u.onstart = () => { started = speechHeard = true; stopAmbient(); }; u.onend = u.onerror = () => { pending--; finish(); };
+    try { speechSynthesis.resume(); } catch (e) {}   // Safari and Chrome can be left "paused" after other audio
     speechSynthesis.speak(u);
+    if (!dog) dog = setTimeout(watch, 5000);
   };
   return {
     push(d) { buf += d; let m; while ((m = buf.match(/^([\s\S]{12,}?[.!?…]["'”»)\]]*)\s+/))) { say(m[1]); buf = buf.slice(m[0].length); } },
@@ -1433,8 +1480,7 @@ function initVoices() {
   };
   fill(); speechSynthesis.onvoiceschanged = fill;
 }
-$('setVoice').addEventListener('change', () => { if ($('setVoice').value) { db.settings[voiceKey()] = $('setVoice').value; persist(); } });
-const IOS_VOICE_TIP = 'For a much better voice on iPhone or iPad, download an Enhanced or Premium voice in Settings > Accessibility > Spoken Content > Voices (for example Ava in English or Paulina in Spanish), then reload this page.';
+$('setVoice').addEventListener('change', () => { if ($('setVoice').value) { db.settings[voiceKey()] = $('setVoice').value; voiceSuspect = false; persist(); } });
 $('testVoice').onclick = () => { autoSave(); voiceWarned = false; voiceBlocked = false; speak(T('The rain came down over the harbour in long silver threads, and somewhere out in the fog, a ship\'s bell began to toll. "Captain," she whispered, "they are early."'), null, true); };
 $('story').addEventListener('click', e => { const m = e.target.closest('.msg.gm'); if (m) speak(m.textContent, null, true); });
 
@@ -2084,11 +2130,13 @@ function loadTtsVoice() {
 }
 const ttsVoiceValue = () => $('setTtsVoice').value === '__custom' ? ($('setTtsVoiceCustom').value.trim() || defaultVoice()) : $('setTtsVoice').value;
 function loadSettings() { if (S().voiceV !== 2) { delete db.settings.voice; delete db.settings.voiceEs; db.settings.voiceV = 2; }   // one-time: forget auto-saved browser voices so the new ranking picks the best one
-  if (S().effortV !== 2) { db.settings.effort = ''; db.settings.effortV = 2; }   // one-time: full Pro depth by default
+  if ((S().effortV || 0) < 3) { db.settings.effort = 'low'; db.settings.effortV = 3; }   // one-time: low thinking by default (deep thinking was the biggest cost)
+  if ((S().notesV || 0) < 2) { db.settings.notesModel = 'cheap'; db.settings.notesV = 2; }   // one-time: hidden plot notes on the cheap model
   if (S().ttsV !== 1) { db.settings.ttsEngine = 'gemini'; db.settings.speak = true; db.settings.ttsV = 1; }   // one-time: AI narrator voice and reading aloud are on by default
-  $('setEffort').value = S().effort === undefined ? '' : S().effort;
+  $('setEffort').value = S().effort === undefined ? 'low' : S().effort;
   $('setTuneRecent').value = tune('recent'); $('setTuneChapters').value = tune('chapters'); $('setTuneRecall').value = tune('recall');
-  $('setNotesModel').value = S().notesModel || 'story'; $('setTtsChunk').value = +S().ttsChunk === 320 ? 700 : 2000; $('setPrices').value = S().prices || P().prices;
+  if (S().ttsChunkV !== 2) { db.settings.ttsChunk = 'one'; db.settings.ttsChunkV = 2; }   // one-time: one voice request per reply, so a daily voice quota lasts longest
+  $('setNotesModel').value = S().notesModel || 'cheap'; $('setTtsChunk').value = ['one', 'two', '2000', '700'].includes(String(S().ttsChunk)) ? String(S().ttsChunk) : 'one'; $('setPrices').value = S().prices || P().prices;
   $('setKey').value = S().key || ''; $('setBase').value = S().base || P().base; $('setFake').checked = !!S().fake; $('setNoEmbed').checked = !!S().noEmbed; $('setSpeak').checked = !!S().speak; $('setCleanDict').checked = S().cleanDict !== false; $('setAmbient').value = S().ambient || ''; $('setRate').value = S().rate || 1; $('setEngine').value = S().ttsEngine || 'gemini'; $('setTtsStyle').value = S().ttsStyle || DEFAULT_TTS_STYLE; }
 $('expBtn').onclick = () => {
   const a = document.createElement('a');
@@ -2108,8 +2156,8 @@ $('impFile').onchange = async e => {
 
 // ---------------- Settings: autosave + diagnostics ----------------
 function collectSettings() {
-  const o = { effort: $('setEffort').value, effortV: 2, ttsV: 1, voiceV: 2, welcomed: true, tune_recent: +$('setTuneRecent').value, tune_chapters: +$('setTuneChapters').value, tune_recall: +$('setTuneRecall').value,
-    notesModel: $('setNotesModel').value, ttsChunk: +$('setTtsChunk').value, prices: $('setPrices').value.trim() || P().prices, key: $('setKey').value.trim(), base: $('setBase').value.trim(), model: $('setModel').value.trim(), cheap: $('setCheap').value.trim(), fake: $('setFake').checked,
+  const o = { effort: $('setEffort').value, effortV: 3, notesV: 2, ttsV: 1, voiceV: 2, welcomed: true, tune_recent: +$('setTuneRecent').value, tune_chapters: +$('setTuneChapters').value, tune_recall: +$('setTuneRecall').value,
+    notesModel: $('setNotesModel').value, ttsChunk: $('setTtsChunk').value, ttsChunkV: 2, prices: $('setPrices').value.trim() || P().prices, key: $('setKey').value.trim(), base: $('setBase').value.trim(), model: $('setModel').value.trim(), cheap: $('setCheap').value.trim(), fake: $('setFake').checked,
     embed: $('setEmbed').value.trim(), noEmbed: $('setNoEmbed').checked, speak: $('setSpeak').checked, cleanDict: $('setCleanDict').checked, ambient: $('setAmbient').value,
     rate: +$('setRate').value, ttsEngine: $('setEngine').value, ttsVoice: ttsVoiceValue(), ttsModel: $('setTtsModel').value.trim(), ttsStyle: $('setTtsStyle').value.trim() };
   return o;   // the browser voice is saved only when you pick one (see setVoice below), so a better voice you download later is used automatically
