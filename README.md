@@ -5,7 +5,8 @@ A single-file, AI-run text adventure. Answer 11 quick questions and a Game Maste
 <!-- Add a screenshot here: ![Holodeck](screenshot.png) -->
 
 ## Features
-- **Curated start:** 11 questions (genre, vibe, character, hook, length) shape your world. Pick a romantic vibe and a final question asks who you are and who you're interested in.
+- **Curated start:** 11 questions (length, genre, vibe, character, hook) shape your world. Pick a romantic vibe and a final question asks who you are and who you're interested in.
+- **Short stories that read like short stories:** 5 and 10 turn adventures are told clean and simple (one goal, a small cast, a payoff ending), and their suggested settings stay on Earth in familiar times.
 - **Same cast, new story:** after a story you love, start a sequel, a "years later", a fresh start or a prequel with the same characters and world.
 - **Long-term memory:** story bible, lorebook, chapter summaries and hybrid keyword + semantic recall keep long stories consistent.
 - **A plan behind the curtain:** secret roadmap, hidden GM secrets, and a "director" that varies pacing and flags repeated phrases.
@@ -46,6 +47,8 @@ A ChatGPT Plus or Claude.ai subscription does **not** include API access: you ne
 | Firefox | yes | no | no |
 
 On iPhone and iPad, the narrator starts after your first tap anywhere on the page (Safari's rule for sound). If it ever waits, a line asks you to tap once.
+
+**Better backup voice on iPhone and iPad:** when the AI narrator is unavailable (or out of credits), the app uses the device's voices. The built-in ones sound robotic; download an Enhanced or Premium voice in *Settings > Accessibility > Spoken Content > Voices* (for example Ava for English, Paulina for Spanish) and reload. The app picks the best voice automatically.
 
 ## Privacy and cost
 - There is no server. Your key and adventures live in your browser's storage (plus an optional folder you choose). The key is sent only to the provider you picked, and is never written to adventure files.
