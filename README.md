@@ -48,13 +48,16 @@ A ChatGPT Plus or Claude.ai subscription does **not** include API access: you ne
 
 On iPhone and iPad, the narrator starts after your first tap anywhere on the page (Safari's rule for sound). If it ever waits, a line asks you to tap once.
 
-**Better backup voice on iPhone and iPad:** when the AI narrator is unavailable (or out of credits), the app uses the device's voices. The built-in ones sound robotic; download an Enhanced or Premium voice in *Settings > Accessibility > Spoken Content > Voices* (for example Ava for English, Paulina for Spanish) and reload. The app picks the best voice automatically.
+**Backup voice on iPhone and iPad:** when the AI narrator is unavailable or out of credits, the app falls back to the device's voices. Web pages on iPhone and iPad can only use Apple's basic built-in voices (Enhanced or Premium voices downloaded in *Settings > Accessibility > Read & Speak > Voices* are not available to Safari), so the backup voice sounds robotic there. The app picks the best one it can. If Safari stays silent, a line asks you to tap once and the reply is read on that tap.
+
+**Narrator voice quota:** by default the app makes one voice request per reply (the voice starts once the reply is written), so a daily limit such as Gemini's ~100 requests lasts about 100 replies. *Settings > Voice & sound* trades more requests for a quicker start.
 
 ## Privacy and cost
 - There is no server. Your key and adventures live in your browser's storage (plus an optional folder you choose). The key is sent only to the provider you picked, and is never written to adventure files.
 - Do not enter your key on a shared computer. Use a key with a low spending cap.
 - Chrome and Edge send dictation audio to Google or Microsoft for transcription.
-- You pay your provider per call. The bar above the message box estimates cost per turn and per adventure; each provider has its own default prices in *Settings > Story & cost*, so check them against your billing page.
+- You pay your provider per call. The bar above the message box estimates cost per turn and per adventure (including input the provider served from its cache at a discount); each provider has its own default prices in *Settings > Story & cost*, so check them against your billing page.
+- Built to keep costs down: the story model thinks at *Low* effort by default, the hidden plot notes and all memory work run on the cheap model, recalled memories are short excerpts, and the prompt is laid out so most of it repeats each turn and can be billed as cached input. Raise the thinking effort in *Settings > Story & cost* if you want deeper (slower, pricier) replies.
 
 ## Troubleshooting
 - **"Model not found" or a 404:** models get renamed. Open *Settings > Connection* and press **Test connection & list models**: it lists what your key can use and switches to available models if a default is missing.
