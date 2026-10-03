@@ -9,7 +9,7 @@ A single-file, AI-run text adventure. Answer 11 quick questions and a Game Maste
 - **Long-term memory:** story bible, lorebook, chapter summaries and hybrid keyword + semantic recall keep long stories consistent.
 - **A plan behind the curtain:** secret roadmap, hidden GM secrets, and a "director" that varies pacing and flags repeated phrases.
 - **Report card:** story grade, play grade, and a review of the secret roadmap at the end.
-- **Hands-free voice:** dictation ("say *end dictation* to send"), narrator voice, soft background sound, and automatic cleanup of misheard words.
+- **Hands-free voice:** dictation ("say *make it so* to send"), narrator voice, soft background sound, and automatic cleanup of misheard words.
 - **You stay in control:** edit the bible and lore mid-story, undo a turn (memory included), watch the cost meter, save adventures as plain JSON files.
 
 ## Quick start
