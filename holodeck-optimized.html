@@ -493,6 +493,13 @@ CRAFT
 - Agency: never decide, say or feel things for the player's character. Respond to what they actually did, and let clever or characterful ideas pay off.
 - Endings: vary them. Usually end on a vivid image, a line of dialogue, a hook, or a pointed question from the world. Do NOT end every reply with a menu of options, and never number options unless the player asks for suggestions.
 - Over time include humour, awe, tension and tenderness; let the Player's Wishes set the balance.
+STORYTELLING STANDARDS (what makes it bingeworthy)
+- Humour is part of the voice, not an add-on: dry understatement, comic specificity (the oddly precise detail), deadpan reactions from the world, characters with ridiculous but sincere priorities, banter with a real punchline, and running gags that return. Wit comes from character and situation, never generic quips or winking at the player. One sharp joke beats three soft ones. Hold it back only in moments of genuine grief or terror, and even then let a human absurdity breathe.
+- Every significant character wants something, fears something and hides something. They pursue their own agendas on-screen: they ask favours, bargain, lie, withhold, change sides, get proud or jealous. Their goals can collide with the player's. Give each a distinct voice (diction, rhythm, habits) and let them surprise the player in ways that make sense afterwards.
+- Make it feel real: concrete, slightly unglamorous detail (logistics, money, hunger, fatigue, paperwork, weather, gossip, local customs, rules that exist for silly reasons). Places have histories and rivalries; background people have errands. Actions cost time, resources or reputation. Not everything is about the player.
+- Run a binge engine: open questions, ticking clocks, mysteries with partial answers, escalating stakes, reversals, and payoffs of details planted earlier (a throwaway line returns as the key). Reward curiosity. End most replies with momentum.
+- Friction over agreement: the player's good ideas work, but with a twist, a price or a witness. Allies push back. Let the player be wrong sometimes, and make it fun when they are.
+- Prose: precise nouns and active verbs, subtext in dialogue (people rarely say exactly what they mean), varied rhythm, no stock phrases. Do not reuse a signature sound, gesture or image more than once every few turns. Do not tie emotional beats into tidy morals; trust the reader.
 RULES
 - The transcript is ground truth: never contradict the story bible, mission map, chapter summaries or lore below.
 - Honor the "Player's Wishes" in the bible: tone, style of play, difficulty and content boundaries are requirements, not suggestions. If the bible names a franchise or genre, echo its texture: its ceremony, jargon, humour and rhythms.
@@ -658,12 +665,13 @@ const PLAN_RULES = `You are the hidden showrunner of a text adventure. Output ON
 {"voice":"2-3 sentences: narrator voice, prose style, sensory palette, humour level, recurring motifs, and distinct speech habits for each main character (all different)",
  "secrets":["4-6 hidden truths, twists or mysteries the player has not discovered yet"],
  "threads":[{"thread":"an ongoing storyline the world is pursuing","status":"seeded|active|resolved"}],
- "big_reveal":"one major revelation or reversal to build toward"}
-Make them surprising, specific to THIS story, and consistent with the bible, lore and history. No commentary, no markdown.`;
+ "big_reveal":"one major revelation or reversal to build toward",
+ "cast":[{"name":"","wants":"what they are pursuing right now","fears":"","secret":"","next_move":"a concrete thing they will do next, whether or not the player is present"}]}
+Make them surprising, specific to THIS story, and consistent with the bible, lore and history. The cast is the 3-5 most important characters (companions and antagonists included): give each real, conflicting motivations, a secret and a next_move; when updating notes, advance every next_move. No commentary, no markdown.`;
 function gmText(a) {
   const g = a.gm; if (!g) return '(none yet: quietly plan a satisfying hidden mystery and seed it)';
   return 'Narrative voice: ' + (g.voice || '') + '\nSecrets (not yet known to the player):\n' + (g.secrets || []).map(s => '- ' + s).join('\n') +
-    '\nWorld threads:\n' + (g.threads || []).map(t => '- [' + (t.status || 'seeded') + '] ' + t.thread).join('\n') + '\nBig reveal to build toward: ' + (g.big_reveal || '(open)');
+    '\nWorld threads:\n' + (g.threads || []).map(t => '- [' + (t.status || 'seeded') + '] ' + t.thread).join('\n') + '\nCast agendas (each person acts on these, on-screen or off):\n' + (g.cast || []).map(c => '- ' + c.name + ': wants ' + c.wants + '; fears ' + c.fears + '; secret: ' + c.secret + '; next move: ' + c.next_move).join('\n') + '\nBig reveal to build toward: ' + (g.big_reveal || '(open)');
 }
 function parseJson(raw) { const i = raw.indexOf('{'), j = raw.lastIndexOf('}'); if (i < 0 || j < i) throw new Error('no JSON'); return JSON.parse(raw.slice(i, j + 1)); }
 async function makeGmNotes(a, revise) {
@@ -673,7 +681,7 @@ async function makeGmNotes(a, revise) {
   const raw = await chat('plan', [{ role: 'system', content: PLAN_RULES + (revise ? '\nYou are UPDATING existing notes: drop secrets the player has now discovered, add fresh ones, update thread statuses, and pick a new big_reveal only if the old one has happened.' : '') },
     { role: 'user', content: (revise ? 'CURRENT NOTES:\n' + gmText(a) + '\n\n' : '') + ctx }]);
   const g = parseJson(raw);
-  if (g && (g.voice || g.secrets)) a.gm = { voice: g.voice || '', secrets: g.secrets || [], threads: g.threads || [], big_reveal: g.big_reveal || '' };
+  if (g && (g.voice || g.secrets)) a.gm = { voice: g.voice || '', secrets: g.secrets || [], threads: g.threads || [], big_reveal: g.big_reveal || '', cast: g.cast || [] };
 }
 const DIRECTOR = {
   complication: 'Introduce a complication, surprise or reversal that changes the situation and raises the stakes a notch (it need not be violent).',
@@ -684,14 +692,19 @@ const DIRECTOR = {
   world: 'Show the world moving without the player: something elsewhere leaks in (overheard talk, a message, a distant sound, a change in the light).',
   seed: 'Plant one subtle clue or oddity that points toward a GM-only secret or thread, without explaining it.',
   wonder: 'Give the player a moment of awe or beauty worth savouring: scale, strangeness, a detail nobody expected.',
-  choice: 'Frame a situation with real trade-offs or a moral wrinkle where no option is obviously right.'
+  choice: 'Frame a situation with real trade-offs or a moral wrinkle where no option is obviously right.',
+  clock: 'Introduce or tighten a ticking clock or looming deadline that gives this scene urgency.',
+  payoff: 'Pay off a detail planted earlier (a throwaway line, an object, an oddity) in a way that surprises and delights.',
+  banter: 'Give two characters a sharp, funny exchange with its own rhythm and a real punchline, revealing what each secretly wants.',
+  texture: 'Add a grounded, slightly unglamorous real-world detail (logistics, money, fatigue, local custom, gossip, a rule that exists for a silly reason) that makes the world feel lived-in.'
 };
-const ENDINGS = ['End on a vivid image or a line of dialogue that hangs in the air.', 'End with a pointed question posed by the world or an NPC, not a menu of options.',
+const HUMOR = ['dry understatement', 'a character with absurd but sincere priorities', 'a callback to an earlier joke or running gag', 'comic specificity: an oddly precise, unexpected detail', 'banter that builds and lands its punchline in the final beat', 'irony between a grand situation and a petty problem', 'a deadpan reaction from the world itself', 'a character who is confidently, entertainingly wrong'];
+const ENDINGS = ['End on a reveal that reframes something from earlier.', 'End on an interruption: someone arrives, something breaks, or a message lands.', 'End on a vivid image or a line of dialogue that hangs in the air.', 'End with a pointed question posed by the world or an NPC, not a menu of options.',
   'End mid-motion, on a hook.', 'End with a quiet observation that invites the player to act, without listing choices.'];
 function directorNotes(a) {
   const turn = a.transcript.filter(t => t.role === 'player').length + 1, m = turn % 10;
   const phase = m >= 1 && m <= 6 ? 'rising' : (m === 7 || m === 8) ? 'peak' : 'release';
-  const weights = { rising: { seed: 2, npc: 2, world: 2, sensory: 1.5 }, peak: { complication: 3, choice: 2, wonder: 1 }, release: { quiet: 3, heart: 2, wonder: 2, sensory: 1 } }[phase];
+  const weights = { rising: { seed: 2, npc: 2, world: 2, sensory: 1.5, banter: 2, texture: 2, clock: 1.5, payoff: 1.5 }, peak: { complication: 3, choice: 2, wonder: 1, clock: 2.5, payoff: 2.5, banter: 1.5 }, release: { quiet: 2, heart: 2, wonder: 1.5, sensory: 1, banter: 2.5, texture: 1.5, payoff: 2 } }[phase];
   a.dir = a.dir || {};
   const pool = Object.keys(DIRECTOR).filter(k => turn - (a.dir[k] || -99) >= 3).map(k => [k, weights[k] || 1]);
   const picked = [];
@@ -712,6 +725,9 @@ function directorNotes(a) {
     else if (turn === a.length - 1) lines.push("The ending is one turn away: set up the final confrontation or decision.");
   }
   if (!(a.length && turn >= a.length)) lines.push(ENDINGS[Math.floor(Math.random() * ENDINGS.length)]);
+  lines.push('Humour this reply: ' + HUMOR[Math.floor(Math.random() * HUMOR.length)] + '. Land it in the specifics of this scene; one sharp joke beats three soft ones. Skip it only if the moment is truly grave.');
+  const cast = (a.gm && a.gm.cast) || [];
+  if (cast.length && Math.random() < 0.75) { const c = cast[Math.floor(Math.random() * cast.length)]; lines.push('Motive in action: ' + c.name + ' wants ' + c.wants + ' and fears ' + c.fears + '. Show them pursuing it visibly in this reply (a choice, a lie, a favour, a closed door), even where it cuts against what the player wants.'); }
   const rep = repetitionNote(a); if (rep) lines.push(rep);
   return lines.map(l => '- ' + l).join('\n');
 }
@@ -1180,9 +1196,10 @@ const CREATE_RULES = `You are a story architect for an interactive text adventur
  "secrets":["4-6 hidden truths, twists or mysteries the player has not discovered yet"],
  "threads":[{"thread":"an ongoing storyline the world is pursuing","status":"seeded|active|resolved"}],
  "big_reveal":"one major revelation or reversal to build toward",
+ "cast":[{"name":"","wants":"what they are pursuing right now","fears":"","secret":"","next_move":"a concrete thing they will do next, whether or not the player is present"}],
  "roadmap":[{"from":1,"to":3,"goal":"secret steering goal for these player turns"}]}
-The adventure lasts exactly the number of player turns given at the end of the questionnaire (N). The roadmap has 3-10 acts (fewer for short adventures) that cover turns 1..N with no gaps or overlaps, rise to a climax, and make the final act a definite, satisfying ending of the main goal. Goals are steering points for the hidden Game Master, not rigid scripts.
-Provide 4-6 beats (the first active) and 3-6 lore entries. Where an answer says "surprise me", invent something fitting the other answers. Respect content boundaries. No commentary, no markdown fences.`;
+The adventure lasts exactly the number of player turns given at the end of the questionnaire (N). The roadmap has 3-10 acts (fewer for short adventures) that cover turns 1..N with no gaps or overlaps, include a midpoint reversal and a low point, rise to a climax, and make the final act a definite, satisfying ending of the main goal. Goals are steering points for the hidden Game Master, not rigid scripts.
+Provide 4-6 beats (the first active), 3-6 lore entries, and a cast of 3-5 characters with conflicting motivations. Where an answer says "surprise me", invent something fitting the other answers. Respect content boundaries. No commentary, no markdown fences.`;
 // ---------------- Adventure length, secret roadmap and the final report card ----------------
 function lengthOf(answers) { const m = /\d+/.exec((answers[answers.length - 1] || {}).a || ''); return m ? Math.max(3, Math.min(200, +m[0])) : 20; }
 function defaultRoadmap(N) {
@@ -1258,7 +1275,7 @@ async function createAdventure(name, answers, cats) {
     (made.places || []).forEach(p => addPlace(a, p)); (made.links || []).forEach(l => Array.isArray(l) && l.length === 2 && addEdge(a, l[0], l[1]));
     if (a.location) { const k = addPlace(a, a.location); a.places[k].visits = 1; }
     (made.beats || []).forEach(b => a.beats.push({ beat: b.beat, status: b.status || 'upcoming' }));
-    if (made.voice || made.secrets) a.gm = { voice: made.voice || '', secrets: made.secrets || [], threads: made.threads || [], big_reveal: made.big_reveal || '' };
+    if (made.voice || made.secrets) a.gm = { voice: made.voice || '', secrets: made.secrets || [], threads: made.threads || [], big_reveal: made.big_reveal || '', cast: made.cast || [] };
     (made.lore || []).forEach(e => { if (e.name) { a.lore[e.name.toLowerCase()] = { name: e.name, type: e.type || 'other', desc: e.desc || '', aliases: e.aliases || [], lastSeen: 0 }; if (e.type === 'place') addPlace(a, e.name); } });
   } else {
     const g = x => (answers[x].a || '');
@@ -1393,7 +1410,7 @@ async function send() {
   stopSpeech(); blip(440); startAmbient();
   if (wasDictated && text && S().cleanDict !== false) text = await cleanDictation(text);
   const hidden = first && !text;
-  if (hidden) text = 'Begin the adventure. Write a cinematic opening of 150-250 words that drops the player into a vivid moment already in motion, rich in sensory detail and atmosphere, honoring the Player\'s Wishes and the bible. Introduce one or two characters with distinct voices and hint at the hook. Do not end with a list of options.';
+  if (hidden) text = 'Begin the adventure. Write a cinematic opening of 150-250 words that drops the player into a vivid moment already in motion, rich in sensory detail and atmosphere, honoring the Player\'s Wishes and the bible. Introduce one or two characters with distinct voices and wants of their own, include a touch of specific humour, and end on an unresolved hook. Do not end with a list of options.';
   else addMsg('pl', text);
   $('input').value = '';
   const wait = addMsg('sys', 'The holodeck is thinking...');
