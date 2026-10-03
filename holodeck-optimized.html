@@ -201,7 +201,8 @@
           <label>Sound while the story is being prepared</label>
           <div class="row"><select id="setAmbient" style="width:100%"><option value="">Default (soft focus pad in hands-free mode, otherwise off)</option><option value="calm">Soft focus pad</option><option value="auto">Match the scene</option><option value="waves">Ocean waves</option><option value="rain">Rain</option><option value="wind">Wind</option><option value="off">Off</option></select></div>
         </div>
-        <button id="testVoice">Test voice</button>
+        <p><button id="testVoice">Test voice</button> <button id="testDevice">Test device voice only</button></p>
+        <p class="tag" id="voiceDiag">Test voice tries the Gemini voice and, if it is out of quota, the device voice (Siri-style system voice). Each step is reported here.</p>
       </section>
 
       <section class="sp" data-p="data">
@@ -958,7 +959,7 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const TTS = 'speechSynthesis' in window;
 const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);   // iPadOS reports itself as a Mac
 const FALLBACK_VOICE = 'Microsoft Ana Online (Natural)';   // Edge's names look like "Microsoft Ana Online (Natural) - English (United States)"
-const SPEECH_LANG = /^en/i.test(navigator.language || '') ? navigator.language : 'en-US';
+const SPEECH_LANG = /^en/i.test(navigator.language || '') ? navigator.language : 'en-US';   // for speech recognition
 // On a computer, browser voices vary wildly, so they are scored (natural/online > Google > the rest; joke voices last) and the best wins.
 // On iPhone/iPad the app does NOT pick a voice: Safari lists voices it cannot actually use (including downloaded Enhanced/Premium ones),
 // and choosing one of those gives silence. Safari's own default voice for the language always works.
@@ -1095,7 +1096,8 @@ function speak(text, done, force) {
 let talkUntil = 0;
 function utter(t) {
   const u = new SpeechSynthesisUtterance(t), v = browserVoice();
-  if (v) u.voice = v; u.lang = v ? v.lang : SPEECH_LANG; u.rate = +S().rate || 1;
+  if (v) { u.voice = v; u.lang = v.lang; }   // no voice: leave the language unset too, so Safari uses its own default voice (it may have none for e.g. en-CA)
+  u.rate = +S().rate || 1;
   talkUntil = Math.max(talkUntil, Date.now()) + t.length * 75 / u.rate + 1500;
   return u;
 }
@@ -1149,7 +1151,38 @@ function initVoices() {
   fill(); speechSynthesis.onvoiceschanged = fill;
 }
 $('setVoice').addEventListener('change', () => { if ($('setVoice').value) db.settings.voice = $('setVoice').value; else delete db.settings.voice; voiceSuspect = false; persist(); });
-$('testVoice').onclick = () => { autoSave(); geminiWarned = false; geminiBlocked = false; voiceSuspect = false; speak('The rain came down over the harbour in long silver threads, and somewhere out in the fog, a ship\'s bell began to toll. "Captain," she whispered, "they are early."', null, true); };
+// ---------------- Voice tests with a step-by-step readout (so problems on a phone or tablet can be seen) ----------------
+const TEST_LINE = 'The rain came down over the harbour in long silver threads, and somewhere out in the fog, a ship\'s bell began to toll. "Captain," she whispered, "they are early."';
+function diag(lines) { $('voiceDiag').innerHTML = lines.filter(Boolean).map(esc).join('<br>'); }
+function testDeviceVoice(report) {   // speaks TEST_LINE with the device voice and reports what the browser says happened
+  if (!TTS) { report('Device voice: this browser has no speech synthesis.'); return; }
+  const u = utter(TEST_LINE), v = browserVoice(), who = v ? v.name + ' (' + v.lang + ')' : 'the browser\'s default voice';
+  let started = false;
+  u.onstart = () => { started = true; report('Device voice: speaking with ' + who + '. If you hear nothing, the volume may be down or the device muted.'); };
+  u.onend = () => report('Device voice: finished speaking with ' + who + (started ? '.' : ', but it never reported starting (nothing was heard?).'));
+  u.onerror = e => report('Device voice: error "' + (e.error || 'unknown') + '" with ' + who + '.');
+  report('Device voice: asked ' + who + ' to speak...');
+  speechSynthesis.speak(u);
+  setTimeout(() => { if (!started) report('Device voice: nothing started after 3 seconds (' + who + '; ' + speechSynthesis.getVoices().length + ' voices listed; speaking=' + speechSynthesis.speaking + (IOS ? '; iPhone/iPad' : '') + ').'); }, 3000);
+}
+$('testDevice').onclick = () => { stopSpeech(); voiceSuspect = false; testDeviceVoice(t => diag([t])); };   // runs inside your tap, which Safari always allows
+$('testVoice').onclick = async () => {
+  autoSave(); stopSpeech(); geminiWarned = false; geminiBlocked = false; voiceSuspect = false;
+  const lines = [], report = (i, t) => { lines[i] = t; diag(lines); };
+  if (TTS) { try { const p = new SpeechSynthesisUtterance(' '); p.volume = 0; speechSynthesis.speak(p); } catch (e) {} }   // inside this tap, so the device voice may speak after the Gemini attempt
+  if (S().fake || !S().key || S().ttsEngine === 'browser') { report(0, 'Gemini voice: ' + (S().ttsEngine === 'browser' ? 'switched off in Settings' : 'no API key (or offline test mode)') + ', so only the device voice is tested.'); testDeviceVoice(t => report(1, t)); return; }
+  report(0, 'Gemini voice: requesting a clip...');
+  try {
+    const url = await geminiTTS(TEST_LINE);
+    player.onended = () => report(0, 'Gemini voice: finished playing.'); player.onerror = null; player.src = url;
+    await player.play(); report(0, 'Gemini voice: playing.');
+  } catch (e) {
+    const quota = /HTTP 429/.test(e.message); if (quota) geminiBlocked = true;
+    report(0, e.name === 'NotAllowedError' ? 'Gemini voice: the clip is ready but the browser blocked playback; tap Test voice again.'
+      : 'Gemini voice: ' + (quota ? 'out of quota for now (HTTP 429)' : 'failed (' + String(e.message).slice(0, 120) + ')') + '. Trying the device voice instead.');
+    if (e.name !== 'NotAllowedError') testDeviceVoice(t => report(1, t));
+  }
+};
 $('story').addEventListener('click', e => { const m = e.target.closest('.msg.gm'); if (m) speak(m.textContent, null, true); });
 
 function micUI(on) { listening = on; }
