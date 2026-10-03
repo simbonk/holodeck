@@ -120,10 +120,11 @@
           <b>AI PROVIDER</b>
           <label>API key</label>
           <div class="row"><input id="setKey" type="password" placeholder="sk-..." autocomplete="off"></div>
-          <div class="warn">Stored only in this browser (localStorage) and sent only to the endpoint below. Use a key with a low spending cap.</div>
+          <div class="warn">Stored only in this browser (localStorage) and sent only to the endpoint below. Use a key with a low spending cap, and do not enter it on a shared computer.</div>
           <p class="tag" id="keyStatus"></p>
           <label>Base URL (any OpenAI-compatible endpoint)</label>
           <div class="row"><input id="setBase" placeholder="https://generativelanguage.googleapis.com/v1beta/openai"></div>
+          <p><button id="testConn">Test connection &amp; list models</button> <span class="tag" id="connStatus"></span></p>
         </div>
         <div class="grp">
           <b>MODELS</b>
@@ -174,6 +175,10 @@
           <label><input type="checkbox" id="setSpeak" style="width:auto"> Read Game Master replies aloud</label>
           <label>Voice engine</label>
           <div class="row"><select id="setEngine" style="width:100%"><option value="browser">Browser voice (free; more robotic)</option><option value="gemini">Gemini narrator voice (uses your Google key; natural, expressive)</option></select></div>
+        </div>
+        <div class="grp">
+          <b>DICTATION</b>
+          <label><input type="checkbox" id="setCleanDict" style="width:auto"> Clean up hands-free messages before sending (fixes misheard words and filler using the story's context; one quick cheap-model call)</label>
         </div>
         <div class="grp">
           <b>GEMINI NARRATOR (DEFAULT)</b>
@@ -241,6 +246,19 @@
   <button class="big" id="contBtn">Continue an experience<small id="contSub">Pick up where you left off</small></button>
   <div id="contList" style="display:none"></div>
   <button class="big" id="startSettings">Settings<small>API key, voice, models and tuning: change them any time</small></button>
+</div></div>
+
+<!-- FIRST-RUN WELCOME -->
+<div id="welcome" class="overlay"><div class="box">
+  <h1>WELCOME TO THE HOLODECK</h1>
+  <p>An AI Game Master runs a story made just for you. Answer 11 quick questions, then play by typing or talking. It remembers everything, builds toward a real ending, and grades the result.</p>
+  <h3>SET UP IN ABOUT A MINUTE</h3>
+  <ol><li>Get a free Gemini API key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--accent)">aistudio.google.com/apikey</a>.</li><li>Paste it below.</li><li>Press Start.</li></ol>
+  <div class="row"><input id="wKey" type="password" placeholder="Paste your API key" autocomplete="off"></div>
+  <p class="warn">Your key is stored only in this browser and sent only to Google. Use a key with a low spending cap, and do not enter it on a shared computer.</p>
+  <button class="big primary" id="wStart">Save key and start<small>Opens the 11 quick questions</small></button>
+  <button class="big" id="wDemo">Try the offline demo<small>No key needed. A fake Game Master so you can look around (turn it off in Settings &gt; Connection).</small></button>
+  <button id="wSkip">Skip for now</button>
 </div></div>
 
 <!-- FINAL REPORT -->
@@ -347,6 +365,12 @@ $('reconBtn').onclick = async () => {
 };
 
 // ---------------- LLM ----------------
+async function llmError(r, what) {   // plain-English explanation for the most common failures
+  const body = (await r.text()).slice(0, 250), hint = {
+    400: 'The request was rejected.', 401: 'The API key was not accepted. Check it in Settings > Connection.', 403: 'The key is not allowed to use "' + what + '". Press Test connection in Settings > Connection.',
+    404: '"' + what + '" was not found (preview models get renamed or retired). Press Test connection in Settings > Connection and pick an available model.', 429: 'Rate limit or daily quota reached. Wait a bit, or lower the voice and memory settings.' }[r.status];
+  return new Error((hint ? hint + ' (HTTP ' + r.status + ') ' : 'LLM error ' + r.status + ': ') + body);
+}
 async function chat(tag, messages) {
   if (S().fake) return fake(tag, messages);
   if (!S().key) throw new Error('Set your API key in Settings (or enable offline test mode).');
@@ -359,7 +383,7 @@ async function chat(tag, messages) {
     body: JSON.stringify(Object.assign({ model, messages }, withEff && tag !== 'gm' ? { reasoning_effort: eff } : {})) });
   let r = await post(true);
   if (r.status === 400 && tag !== 'gm') r = await post(false);
-  if (!r.ok) throw new Error('LLM error ' + r.status + ': ' + (await r.text()).slice(0, 300));
+  if (!r.ok) throw await llmError(r, model);
   const j = await r.json(); recordUsage(tag, j.usage, bigModel);
   return j.choices[0].message.content;
 }
@@ -412,7 +436,7 @@ async function chatStream(messages, onDelta) {
   for (const [eff, usage] of [[effort, true], [effort === 'minimal' ? 'low' : effort, true], [effort, false], ['', false]]) {
     r = await call(eff, usage); if (r.status !== 400) break; console.warn('request rejected with reasoning_effort="' + eff + '", usage=' + usage + '; retrying');
   }
-  if (!r.ok) throw new Error('LLM error ' + r.status + ': ' + (await r.text()).slice(0, 300));
+  if (!r.ok) throw await llmError(r, model);
   if (!r.body || (r.headers.get('content-type') || '').includes('application/json')) {   // endpoint ignored streaming
     const j = await r.json(), full = j.choices[0].message.content; recordUsage('gm', j.usage, true); onDelta(full); return full;
   }
@@ -1040,7 +1064,7 @@ function listen() {
   rec.onend = () => {
     recRun = false; micUI(false);
     const t = $('input').value.trim();
-    if (dictDone) { dictBuf = ''; if (t && !busy) send(); }
+    if (dictDone) { dictBuf = ''; if (t && !busy) { dictated = true; send(); } }
     else dictBuf = micMuted() ? '' : t;   // the browser ends sessions after silence: keep what was said and reopen
     const slow = voiceErr || quietErr; quietErr = false;
     if (handsActive) setTimeout(listen, slow ? 1500 : 200);
@@ -1168,7 +1192,9 @@ function validRoadmap(r, N) {   // accept the model's roadmap only if it is well
   return acts.every(x => x.to >= x.from) ? acts : null;
 }
 const playerTurns = a => a.transcript.filter(t => t.role === 'player').length;
-const FINAL_RULES = `You are a high school English teacher marking a student's interactive-fiction session, and also the judge of the player's play. Be fair but honest and specific, like real margin comments; do not inflate grades. Output ONLY one JSON object:
+const FINAL_RULES = `You are a high school English teacher marking a student's interactive-fiction session, and also the judge of the player's play. Be fair but honest and specific, like real margin comments; do not inflate grades.
+GRADING CALIBRATION (be strict): grade against published fiction and strong roleplay, not against effort. Typical sessions land at 70-85; 86-92 needs clear excellence; 93+ is very rare; 100 is never given. Every grade must be backed by at least one specific strength AND one specific weakness cited from the transcript. For the player, "followed" measures how much of each roadmap act was actually achieved within its own turns, not whether the player stayed vaguely on theme: give 90+ only if every act was clearly hit, and mark an act "yes" only when its goal was fully achieved, otherwise "partly" or "no". Judge decisions on risk taken, consequences accepted, problem-solving and variety; passive, repetitive or consequence-free play scores lower. Ignore voice-to-text transcription errors in the player's words: never penalise or mention them. Letter grades must match scores (A 93-100, A- 90-92, B+ 87-89, B 83-86, B- 80-82, C+ 77-79, C 70-76, D or F below 70).
+Output ONLY one JSON object:
 {"title":"a title for the story",
  "summary":"150-220 word past-tense recap of the whole adventure, second person",
  "story":{"grade":"letter grade such as B+","score":0-100,"comments":"3-5 sentences of teacher feedback on plot, character, pacing, prose and payoff, citing specifics","strengths":["2-3 short items"],"improve":["2-3 short items"]},
@@ -1330,8 +1356,23 @@ function saveBibleNow() {
 $('bibleEdit').addEventListener('input', () => { $('bibleStatus').textContent = 'Editing...'; clearTimeout(bibleTimer); bibleTimer = setTimeout(saveBibleNow, 700); });
 $('bibleEdit').addEventListener('blur', saveBibleNow);
 
+let dictated = false;   // set when a message came from hands-free dictation
+const CLEAN_RULES = `You clean up speech-to-text for a text adventure player. Fix ONLY transcription damage: misheard words and wrong homophones (use the story context to decide, e.g. "insect" is probably "instinct", "Steam Fisher" is probably "steam vent"), garbled character or place names (use the supplied story names), filler words (uh, um, you know), stuttered repeats and abandoned false starts, and punctuation and capitalisation. Keep the player's meaning, first-person voice, order and level of detail exactly; never add, remove or reinterpret ideas, and never answer or continue the story. If the text is already fine, return it unchanged. Output ONLY the corrected text.`;
+async function cleanDictation(text) {
+  if (S().fake || !S().key) return text;
+  const a = A(), lastGm = [...a.transcript].reverse().find(t => t.role === 'gm');
+  try {
+    const out = await Promise.race([chat('clean', [{ role: 'system', content: CLEAN_RULES },
+      { role: 'user', content: 'STORY NAMES: ' + (Object.values(a.lore).map(e => e.name).slice(0, 40).join(', ') || '(none)') + '\nLOCATION: ' + (a.location || 'unknown') +
+        '\nTHE NARRATOR JUST SAID:\n' + (lastGm ? lastGm.text.slice(-700) : '(this is the opening)') + '\n\nDICTATED TEXT:\n' + text }]),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 5000))]);
+    const t = String(out).trim();
+    return t && t.length > text.length * 0.5 && t.length < text.length * 1.5 + 20 ? t : text;   // reject answers that rewrote too much
+  } catch (e) { console.warn('dictation cleanup skipped:', e.message); return text; }
+}
 async function send() {
   if (busy || !A()) return;
+  const wasDictated = dictated; dictated = false;
   { const a0 = A();
     if (a0.result) { showFinale(a0); return; }
     if (a0.finishing) return;
@@ -1342,6 +1383,7 @@ async function send() {
   busy = true; $('send').disabled = true; showTab('story'); dictBuf = '';
   usageBase = Object.assign(JSON.parse(JSON.stringify(A().usage || {})), { __adv: db.current });
   stopSpeech(); blip(440); startAmbient();
+  if (wasDictated && text && S().cleanDict !== false) text = await cleanDictation(text);
   const hidden = first && !text;
   if (hidden) text = 'Begin the adventure. Write a cinematic opening of 150-250 words that drops the player into a vivid moment already in motion, rich in sensory detail and atmosphere, honoring the Player\'s Wishes and the bible. Introduce one or two characters with distinct voices and hint at the hook. Do not end with a list of options.';
   else addMsg('pl', text);
@@ -1391,7 +1433,7 @@ function loadSettings() { if (S().voiceV !== 1) { delete db.settings.voice; db.s
   $('setEffort').value = S().effort === undefined ? '' : S().effort;
   $('setTuneRecent').value = tune('recent'); $('setTuneChapters').value = tune('chapters'); $('setTuneRecall').value = tune('recall');
   $('setNotesModel').value = S().notesModel || 'story'; $('setTtsChunk').value = +S().ttsChunk === 320 ? 700 : 2000; $('setPrices').value = S().prices || DEFAULT_PRICES;
-  $('setKey').value = S().key || ''; $('setBase').value = S().base || DEFAULTS.base; $('setModel').value = S().model || DEFAULTS.model; $('setCheap').value = S().cheap || DEFAULTS.cheap; $('setFake').checked = !!S().fake; $('setEmbed').value = S().embed || DEFAULTS.embed; $('setNoEmbed').checked = !!S().noEmbed; $('setSpeak').checked = !!S().speak; $('setAmbient').value = S().ambient || ''; $('setRate').value = S().rate || 1; $('setEngine').value = S().ttsEngine || 'gemini'; loadTtsVoice(); $('setTtsModel').value = S().ttsModel || 'gemini-3.8-flash-tts'; $('setTtsStyle').value = S().ttsStyle || DEFAULT_TTS_STYLE; }
+  $('setKey').value = S().key || ''; $('setBase').value = S().base || DEFAULTS.base; $('setModel').value = S().model || DEFAULTS.model; $('setCheap').value = S().cheap || DEFAULTS.cheap; $('setFake').checked = !!S().fake; $('setEmbed').value = S().embed || DEFAULTS.embed; $('setNoEmbed').checked = !!S().noEmbed; $('setSpeak').checked = !!S().speak; $('setCleanDict').checked = S().cleanDict !== false; $('setAmbient').value = S().ambient || ''; $('setRate').value = S().rate || 1; $('setEngine').value = S().ttsEngine || 'gemini'; loadTtsVoice(); $('setTtsModel').value = S().ttsModel || 'gemini-3.8-flash-tts'; $('setTtsStyle').value = S().ttsStyle || DEFAULT_TTS_STYLE; }
 // (the Save button handler is defined with the autosave code below)
 $('expBtn').onclick = () => {
   const a = document.createElement('a');
@@ -1431,9 +1473,9 @@ loadSettings(); refresh(); renderStart(); initDir(); initVoices();
 
 // ---------------- Settings: autosave + diagnostics ----------------
 function collectSettings() {
-  return { effort: $('setEffort').value, effortV: 2, ttsV: 1, voiceV: 1, tune_recent: +$('setTuneRecent').value, tune_chapters: +$('setTuneChapters').value, tune_recall: +$('setTuneRecall').value,
+  return { effort: $('setEffort').value, effortV: 2, ttsV: 1, voiceV: 1, welcomed: true, tune_recent: +$('setTuneRecent').value, tune_chapters: +$('setTuneChapters').value, tune_recall: +$('setTuneRecall').value,
     notesModel: $('setNotesModel').value, ttsChunk: +$('setTtsChunk').value, prices: $('setPrices').value.trim() || DEFAULT_PRICES, key: $('setKey').value.trim(), base: $('setBase').value.trim(), model: $('setModel').value.trim(), cheap: $('setCheap').value.trim(), fake: $('setFake').checked,
-    embed: $('setEmbed').value.trim(), noEmbed: $('setNoEmbed').checked, speak: $('setSpeak').checked, ambient: $('setAmbient').value,
+    embed: $('setEmbed').value.trim(), noEmbed: $('setNoEmbed').checked, speak: $('setSpeak').checked, cleanDict: $('setCleanDict').checked, ambient: $('setAmbient').value,
     voice: $('setVoice').value, rate: +$('setRate').value, ttsEngine: $('setEngine').value, ttsVoice: ttsVoiceValue(), ttsModel: $('setTtsModel').value.trim(), ttsStyle: $('setTtsStyle').value.trim() };
 }
 function keyStatus() {
@@ -1444,6 +1486,25 @@ function keyStatus() {
 function autoSave() { const voice = $('setVoice').value; db.settings = collectSettings(); if (!voice && S().voice === '') delete db.settings.voice; persist(); keyStatus(); }
 $('saveSet').onclick = () => { autoSave(); alert('Settings saved.'); };
 document.querySelectorAll('#settings input:not([type=file]), #settings select, #settings textarea').forEach(el => { el.addEventListener('change', autoSave); if (el.type === 'password' || el.type === 'text' || el.tagName === 'TEXTAREA') el.addEventListener('input', autoSave); });
+$('testConn').onclick = async () => {
+  autoSave(); const st = $('connStatus');
+  if (!S().key) { st.textContent = 'Enter an API key first.'; return; }
+  st.textContent = 'Testing...';
+  try {
+    const r = await fetch((S().base || DEFAULTS.base).replace(/\/$/, '') + '/models', { headers: { 'Authorization': 'Bearer ' + S().key } });
+    if (!r.ok) throw await llmError(r, 'the model list');
+    const ids = (await r.json()).data.map(m => String(m.id).replace(/^models\//, ''));
+    const chatM = ids.filter(i => /^gemini/.test(i) && !/embed|tts|image|live|audio|vision/.test(i));
+    const add = (id, list) => { const el = $(id); list.forEach(v => { if (![...el.options].some(o => o.value === v)) el.insertBefore(new Option(v, v), el.lastChild); }); };
+    add('setModel', chatM); add('setCheap', chatM); add('setEmbed', ids.filter(i => /embed/.test(i))); add('setTtsModel', ids.filter(i => /tts/.test(i)));
+    st.textContent = 'Key works. ' + ids.length + ' models found; the model pickers above now list the ones available to you. Choose your story and cheap models there.';
+  } catch (e) { st.textContent = 'Failed: ' + e.message; }
+};
+function closeWelcome() { db.settings.welcomed = true; persist(); $('welcome').classList.remove('on'); }
+$('wStart').onclick = () => { const k = $('wKey').value.trim(); if (!k) { alert('Paste your API key first, or choose the offline demo.'); return; } $('setKey').value = k; autoSave(); closeWelcome(); $('newExpBtn').click(); };
+$('wDemo').onclick = () => { $('setFake').checked = true; autoSave(); closeWelcome(); $('newExpBtn').click(); };
+$('wSkip').onclick = closeWelcome;
+if (!S().key && !S().fake && !S().welcomed && !Object.keys(db.adventures).length) $('welcome').classList.add('on');
 keyStatus();
 (function storageCheck() {
   let ok = true;
