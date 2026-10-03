@@ -171,7 +171,7 @@
       <section class="sp" data-p="voice">
         <div class="grp">
           <b>NARRATION</b>
-          <p class="tag">Tap Hands-free (next to Send) once and the microphone stays on: say "end dictation" to send. Tap a Game Master message to hear it again. Speech recognition uses your browser's built-in service (Chrome and Edge send the audio to Google or Microsoft servers to transcribe it), so avoid it for anything sensitive.</p>
+          <p class="tag">Tap Hands-free (next to Send) once and the microphone stays on: say "make it so" to send. Tap a Game Master message to hear it again. Speech recognition uses your browser's built-in service (Chrome and Edge send the audio to Google or Microsoft servers to transcribe it), so avoid it for anything sensitive.</p>
           <label><input type="checkbox" id="setSpeak" style="width:auto"> Read Game Master replies aloud</label>
           <label>Voice engine</label>
           <div class="row"><select id="setEngine" style="width:100%"><option value="browser">Browser voice (free; more robotic)</option><option value="gemini">Gemini narrator voice (uses your Google key; natural, expressive)</option></select></div>
@@ -232,7 +232,7 @@
   <div id="composer">
     <textarea id="input" placeholder="What do you do?"></textarea>
     <button id="undoBtn" title="Undo last turn (restores memory too)">&#8630;</button>
-    <button id="micBtn" title="Hands-free: the microphone stays on; say 'end dictation' to send">&#127911; Hands-free</button>
+    <button id="micBtn" title="Hands-free: the microphone stays on; say 'make it so' to send">&#127911; Hands-free</button>
     <button id="send" class="primary">Send</button>
   </div>
 </div>
@@ -1014,16 +1014,18 @@ function blip(freq) {   // short soft tone so you can hear (eyes closed) that th
   g.gain.exponentialRampToValueAtTime(0.12, c.currentTime + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 0.35);
   o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + 0.4);
 }
-const hasEnd = s => /\bend (of )?dictation\b/i.test(s), stripEnd = s => s.replace(/\bend (of )?dictation\b[.,!?]*/ig, ' ').replace(/\s+/g, ' ').trim();
+// The send phrase is "Make it so" (Captain Picard). It only counts at the very END of what you said, and only after a short pause, so a sentence like "make it so the door opens" does not send. "End dictation" still works as a backup.
+const END_RE = /\b(make it so|end (of )?dictation)\b[.,!?\s]*$/i, hasEnd = s => END_RE.test(s), stripEnd = s => s.replace(END_RE, '').replace(/\s+/g, ' ').trim();
+let endTimer = null;
 // Hands-free: the microphone stays on until you tap the button again. Speech is ignored while the story is being prepared or the narrator is talking
-// (so it never hears itself), and only the words "end dictation" send the message. Pauses never send.
+// (so it never hears itself), and only the words "make it so" send the message. Pauses never send.
 let recRun = false, lastMuted = false, voiceErr = '', quietErr = false;
 const narrating = () => !!activeGemini || (TTS && speechSynthesis.speaking);
 const micMuted = () => busy || narrating();
 function voiceStatus(m, warn) { const el = $('voiceStatus'); el.textContent = m; el.style.color = warn ? 'var(--warn)' : 'var(--dim)'; el.style.display = m ? '' : 'none'; }
 function setHandsUI() {
   $('micBtn').innerHTML = handsActive ? '&#127911; Hands-free ON' : '&#127911; Hands-free';
-  $('input').placeholder = handsActive ? 'Say "end dictation" to send message' : 'What do you do?';
+  $('input').placeholder = handsActive ? 'Say "make it so" to send message' : 'What do you do?';
   if (!handsActive) { $('micBtn').classList.remove('rec'); voiceStatus(''); }
 }
 setInterval(() => {
@@ -1036,7 +1038,7 @@ setInterval(() => {
   $('micBtn').classList.toggle('rec', recRun && !m);
   const fileNote = location.protocol === 'file:' ? ' (Opened as a file, so the browser asks for the microphone again on every restart. Run serve.bat and open http://localhost:8080/holodeck-optimized.html instead.)' : '';
   if (voiceErr && !m) voiceStatus(voiceErr, true);
-  else voiceStatus((m ? (narrating() ? 'Hands-free ON: narrator speaking (mic paused).' : 'Hands-free ON: the story is being prepared...') : recRun ? 'Hands-free ON: listening. Say "end dictation" to send message.' : 'Hands-free ON: starting the microphone...') + fileNote, !!fileNote);
+  else voiceStatus((m ? (narrating() ? 'Hands-free ON: narrator speaking (mic paused).' : 'Hands-free ON: the story is being prepared...') : recRun ? 'Hands-free ON: listening. Say "make it so" to send message.' : 'Hands-free ON: starting the microphone...') + fileNote, !!fileNote);
 }, 400);
 function listen() {
   if (!SR) { alert('Speech recognition is not supported in this browser. Chrome, Edge and Safari support it.'); handsActive = false; setHandsUI(); return; }
@@ -1051,7 +1053,12 @@ function listen() {
     let interim = '';
     for (let i = e.resultIndex; i < e.results.length; i++) { const r = e.results[i]; if (r.isFinal) finalText += r[0].transcript + ' '; else interim += r[0].transcript; }
     const full = (finalText + interim).trim();
-    if (hasEnd(full)) { dictDone = true; finalText = stripEnd(full); $('input').value = finalText; try { rec.stop(); } catch (x) {} return; }
+    if (hasEnd(full)) {
+      $('input').value = stripEnd(full); clearTimeout(endTimer);
+      endTimer = setTimeout(() => { endTimer = null; dictDone = true; finalText = stripEnd(full); $('input').value = finalText; try { rec.stop(); } catch (x) {} }, 800);   // wait a beat: if you keep talking, the phrase was part of a sentence
+      return;
+    }
+    clearTimeout(endTimer); endTimer = null;
     $('input').value = full;
   };
   rec.onerror = e => {
@@ -1063,6 +1070,7 @@ function listen() {
   };
   rec.onend = () => {
     recRun = false; micUI(false);
+    if (endTimer) { clearTimeout(endTimer); endTimer = null; dictDone = true; }   // the session ended while the send phrase was pending: treat it as sent
     const t = $('input').value.trim();
     if (dictDone) { dictBuf = ''; if (t && !busy) { dictated = true; send(); } }
     else dictBuf = micMuted() ? '' : t;   // the browser ends sessions after silence: keep what was said and reopen
