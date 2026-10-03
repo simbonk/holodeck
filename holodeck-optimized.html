@@ -368,23 +368,62 @@ $('reconBtn').onclick = async () => {
 async function llmError(r, what) {   // plain-English explanation for the most common failures
   const body = (await r.text()).slice(0, 250), hint = {
     400: 'The request was rejected.', 401: 'The API key was not accepted. Check it in Settings > Connection.', 403: 'The key is not allowed to use "' + what + '". Press Test connection in Settings > Connection.',
-    404: '"' + what + '" was not found (preview models get renamed or retired). Press Test connection in Settings > Connection and pick an available model.', 429: 'Rate limit or daily quota reached. Wait a bit, or lower the voice and memory settings.' }[r.status];
+    404: '"' + what + '" was not found (preview models get renamed or retired). Press Test connection in Settings > Connection and pick an available model.', 429: 'Rate limit or daily quota reached (free-tier keys get only a few requests per minute and per day). Wait a bit, or lower the voice and memory settings.' }[r.status];
   return new Error((hint ? hint + ' (HTTP ' + r.status + ') ' : 'LLM error ' + r.status + ': ') + body);
+}
+// ---------------- Free-tier keys ----------------
+// A free key looks exactly like a paid one, but Google refuses models outside the free tier (Pro-class models) with HTTP 429 and a message
+// naming "free_tier" with "limit: 0". When that happens to the story model, the app remembers it (settings.freeTier) and uses the cheap model
+// for the story too. Paid keys never trigger this, so they keep the better defaults. Changing the key or story model, or Test connection, re-checks.
+const apiBase = () => (S().base || DEFAULTS.base).replace(/\/$/, '');
+const cheapModel = () => S().cheap || DEFAULTS.cheap;
+const storyModel = () => S().freeTier ? cheapModel() : (S().model || DEFAULTS.model);
+const isTierRefusal = body => /free_tier/i.test(body) && /limit:\s*0\b/.test(body);
+const retryAfter = (r, body) => { const m = /retry in ([\d.]+)\s*s/i.exec(body) || /"retryDelay":\s*"([\d.]+)s"/.exec(body); return m ? +m[1] : +r.headers.get('retry-after') || 0; };
+const sleep = ms => new Promise(res => setTimeout(res, ms));
+let pendingNotice = '';
+function notice(t) {   // a system line in the story; held until the story is on screen if the curator is still open
+  if (A() && !$('curator').classList.contains('on')) addMsg('sys', t); else { pendingNotice = t; $('curMsg').textContent = t; }
+}
+function goFree(model) {
+  if (S().freeTier) return;
+  db.settings.freeTier = true; persist(); keyStatus();
+  notice('Your API key is on Google\'s free tier, which does not include "' + model + '", so the story now uses "' + cheapModel() + '" instead. To use the richer model, enable billing for your key\'s Google project, then press Test connection in Settings > Connection.');
+}
+// Runs a request; on a free-tier refusal of the story model, switches to the cheap model; on a short rate limit, waits once and retries.
+async function quotaRetry(model, big, run) {
+  let r = await run(model);
+  if (r.status !== 429) return { r, model };
+  const body = await r.clone().text();
+  if (big && model !== cheapModel() && isTierRefusal(body)) { goFree(model); model = cheapModel(); r = await run(model); }
+  else { const w = retryAfter(r, body); if (w > 0 && w <= 30) { if (big) holoStage = 'rate limited; retrying in ' + Math.ceil(w) + 's'; await sleep(w * 1000 + 250); r = await run(model); } }
+  return { r, model };
+}
+async function probeTier() {   // one tiny request to the story model; returns a sentence for the status line
+  if (S().fake || !S().key) return '';
+  const model = S().model || DEFAULTS.model;
+  try {
+    const r = await fetch(apiBase() + '/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + S().key },
+      body: JSON.stringify({ model, messages: [{ role: 'user', content: 'Reply with the single word OK.' }] }) });
+    if (r.ok) { if (S().freeTier) { delete db.settings.freeTier; persist(); keyStatus(); } return 'Your key can use the story model "' + model + '".'; }
+    const body = await r.text();
+    if (r.status === 429 && isTierRefusal(body)) { goFree(model); return 'Free-tier key: "' + model + '" is not included, so the story will use "' + cheapModel() + '".'; }
+    return 'The story model "' + model + '" answered HTTP ' + r.status + '.';
+  } catch (e) { return ''; }
 }
 async function chat(tag, messages) {
   if (S().fake) return fake(tag, messages);
   if (!S().key) throw new Error('Set your API key in Settings (or enable offline test mode).');
-  const base = (S().base || DEFAULTS.base).replace(/\/$/, '');
+  const base = apiBase();
   const bigModel = tag === 'gm' || tag === 'final' || (tag === 'plan' && S().notesModel !== 'cheap');   // GM notes can be moved to the cheap model in Settings
-  const model = bigModel ? (S().model || DEFAULTS.model) : (S().cheap || DEFAULTS.cheap);
   const eff = tag === 'plan' || tag === 'final' ? 'low' : 'minimal';   // background calls do not need deep thinking
-  const post = withEff => fetch(base + '/chat/completions', { method: 'POST',
+  const post = (model, withEff) => fetch(base + '/chat/completions', { method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + S().key },
     body: JSON.stringify(Object.assign({ model, messages }, withEff && tag !== 'gm' ? { reasoning_effort: eff } : {})) });
-  let r = await post(true);
-  if (r.status === 400 && tag !== 'gm') r = await post(false);
+  const run = async model => { const r = await post(model, true); return r.status === 400 && tag !== 'gm' ? post(model, false) : r; };
+  const { r, model } = await quotaRetry(bigModel ? storyModel() : cheapModel(), bigModel, run);
   if (!r.ok) throw await llmError(r, model);
-  const j = await r.json(); recordUsage(tag, j.usage, bigModel);
+  const j = await r.json(); recordUsage(tag, j.usage, bigModel && !S().freeTier);
   return j.choices[0].message.content;
 }
 // ---------------- Usage meter: tokens and estimated cost, stored per adventure ----------------
@@ -417,7 +456,8 @@ function showUsage() {
   const last = usageCost(dn);
   el.textContent = 'Last turn: story ' + kfmt(g.i - g0.i) + ' in / ' + kfmt(g.o - g0.o) + ' out' + (g.th - g0.th > 0 ? ' (' + kfmt(g.th - g0.th) + ' thinking)' : '') +
     (dn.voice && dn.voice.s ? ' | voice ' + Math.round(dn.voice.s) + 's' : '') + ' | ~$' + last.total.toFixed(3) +
-    '  ||  Adventure: ~$' + tot.total.toFixed(2) + ' (story ' + tot.story.toFixed(2) + ', memory ' + tot.bg.toFixed(2) + ', voice ' + tot.voice.toFixed(2) + ')';
+    '  ||  Adventure: ~$' + tot.total.toFixed(2) + ' (story ' + tot.story.toFixed(2) + ', memory ' + tot.bg.toFixed(2) + ', voice ' + tot.voice.toFixed(2) + ')' +
+    (S().freeTier ? '  ||  Free-tier key: Google does not bill these calls' : '');
 }
 // Streaming version of the story call: onDelta(text) fires as tokens arrive. Returns the full reply.
 async function chatStream(messages, onDelta) {
@@ -427,18 +467,23 @@ async function chatStream(messages, onDelta) {
     return t;
   }
   if (!S().key) throw new Error('Set your API key in Settings (or enable offline test mode).');
-  const base = (S().base || DEFAULTS.base).replace(/\/$/, ''), model = S().model || DEFAULTS.model;
+  const base = apiBase();
   const effort = S().effort === undefined ? '' : S().effort;   // Pro-class Gemini models "think" for many seconds before the first token; low effort cuts that a lot
-  const call = (eff, usage) => fetch(base + '/chat/completions', { method: 'POST',
+  const call = (model, eff, usage) => fetch(base + '/chat/completions', { method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + S().key },
     body: JSON.stringify(Object.assign({ model, messages, stream: true }, eff ? { reasoning_effort: eff } : {}, usage ? { stream_options: { include_usage: true } } : {})) });
-  let r = null;   // try the requested settings first, then progressively plainer requests if the endpoint rejects a parameter
-  for (const [eff, usage] of [[effort, true], [effort === 'minimal' ? 'low' : effort, true], [effort, false], ['', false]]) {
-    r = await call(eff, usage); if (r.status !== 400) break; console.warn('request rejected with reasoning_effort="' + eff + '", usage=' + usage + '; retrying');
-  }
+  const run = async model => {   // try the requested settings first, then progressively plainer requests if the endpoint rejects a parameter
+    let r = null;
+    for (const [eff, usage] of [[effort, true], [effort === 'minimal' ? 'low' : effort, true], [effort, false], ['', false]]) {
+      r = await call(model, eff, usage); if (r.status !== 400) break; console.warn('request rejected with reasoning_effort="' + eff + '", usage=' + usage + '; retrying');
+    }
+    return r;
+  };
+  const { r, model } = await quotaRetry(storyModel(), true, run);
   if (!r.ok) throw await llmError(r, model);
+  const big = !S().freeTier;
   if (!r.body || (r.headers.get('content-type') || '').includes('application/json')) {   // endpoint ignored streaming
-    const j = await r.json(), full = j.choices[0].message.content; recordUsage('gm', j.usage, true); onDelta(full); return full;
+    const j = await r.json(), full = j.choices[0].message.content; recordUsage('gm', j.usage, big); onDelta(full); return full;
   }
   const reader = r.body.getReader(), dec = new TextDecoder(); let buf = '', full = '', usage = null;
   for (;;) {
@@ -452,7 +497,7 @@ async function chatStream(messages, onDelta) {
       try { const o = JSON.parse(data); if (o.usage) usage = o.usage; const d = o.choices && o.choices[0] && o.choices[0].delta.content; if (d) { full += d; onDelta(d); } } catch (e) { /* partial or non-content chunk */ }
     }
   }
-  recordUsage('gm', usage, true);
+  recordUsage('gm', usage, big);
   if (!full) throw new Error('The model returned an empty reply.');
   return full;
 }
@@ -501,7 +546,7 @@ STORYTELLING STANDARDS (what makes it bingeworthy)
 - Friction over agreement: the player's good ideas work, but with a twist, a price or a witness. Allies push back. Let the player be wrong sometimes, and make it fun when they are.
 - Prose: precise nouns and active verbs, subtext in dialogue (people rarely say exactly what they mean), varied rhythm, no stock phrases. Do not reuse a signature sound, gesture or image more than once every few turns. Do not tie emotional beats into tidy morals; trust the reader.
 RULES
-- The transcript is ground truth: never contradict the story bible, mission map, chapter summaries or lore below.
+- Continuity: never contradict the story bible, mission map, chapter summaries, lore or earlier events in the transcript. One exception: facts the player changed by hand (PLAYER-SET FACTS and PLAYER CHANGES below) override everything else, including your own earlier narration. Treat them as always having been true and write them consistently (names, pronouns, appearance, relationships), without commenting on the change.
 - Honor the "Player's Wishes" in the bible: tone, style of play, difficulty and content boundaries are requirements, not suggestions. If the bible names a franchise or genre, echo its texture: its ceremony, jargon, humour and rhythms.
 - Follow the PRIVATE notes (GM secrets and director notes) but never reveal or mention them. Seed clues instead of explaining.
 - Reuse existing characters and places; introduce new ones sparingly, with memorable names.
@@ -537,28 +582,36 @@ async function takeTurn(input, hidden, onDelta) {
   const a = A(), tr = a.transcript;
   const recentStart = Math.max(0, tr.length - RECENT_N());
   const snap = snapshot(a);
+  // Hand edits to the bible since the GM last saw it become PLAYER CHANGES (a line diff, so the model knows exactly what changed).
+  if (a.bibleSeen == null) { if (a.bibleEdited) noteChange(a, 'Story bible: the player edited the bible by hand; treat it as authoritative.'); }
+  else if (a.bible !== a.bibleSeen) lineDiff(a.bibleSeen, a.bible).slice(0, 8).forEach(l => noteChange(a, 'Story bible now says: ' + l.slice(0, 300)));
+  const bibleNow = a.bible;
   holoStage = 'recalling memories';
-  const memList = await retrieve(a, input, recentStart);
+  const pinned = pinnedLore(a), pinnedLines = pinned.map(loreLine);
+  const memList = (await retrieve(a, input, recentStart)).filter(x => !pinnedLines.includes(x));   // pinned entries are already in the prompt
   holoStage = 'waiting for the story model';
   const mem = memList.map(x => '- ' + x).join('\n') || '(none)';
+  const changes = liveChanges(a);
   const chapters = (a.chunks || []).slice(-tune('chapters')).map(c => '- Turns ' + c.from + '-' + c.to + ': ' + c.text).join('\n') || '(none yet)';
   // Prompt order is deliberate: the parts that rarely change come first (rules, bible, chapters, GM notes) so the API can reuse its
   // automatic prefix cache; the parts that change every turn (map, memories, director notes) come last.
-  const system = GM_RULES + '\n\n## STORY BIBLE\n' + a.bible + '\n\n## STORY SO FAR (chapter summaries)\n' + chapters + '\n\n## PRIVATE GM NOTES (never reveal outright)\n' + gmText(a) +
+  const system = GM_RULES + '\n\n## STORY BIBLE\n' + a.bible +
+    (pinned.length ? '\n\n## PLAYER-SET FACTS (written by the player; they override earlier narration, lore and notes)\n' + pinnedLines.map(x => '- ' + x).join('\n') : '') +
+    '\n\n## STORY SO FAR (chapter summaries)\n' + chapters + '\n\n## PRIVATE GM NOTES (never reveal outright)\n' + gmText(a) +
     '\n\n## MISSION MAP\n' + mapText(a) + '\n## RELEVANT MEMORIES\n' + mem + '\n\n## DIRECTOR NOTES FOR THIS REPLY (private; do not mention)\n' + directorNotes(a) +
-    (a.bibleEdited ? '\n\nNOTICE: The player just edited the story bible by hand. Treat the bible above as authoritative, even where it conflicts with earlier narration, and work the changes into the story naturally starting with this reply.' : '');
+    (changes.length ? '\n\n## PLAYER CHANGES (made by hand; they win over anything said earlier in this conversation. Apply them from this reply on as if they had always been true, e.g. new pronouns or descriptions, and do not comment on the change)\n' + changes.map(c => '- ' + c.text).join('\n') : '');
   const messages = [{ role: 'system', content: system }];
   tr.slice(recentStart).forEach(t => messages.push({ role: t.role === 'player' ? 'user' : 'assistant', content: t.text }));
   messages.push({ role: 'user', content: input });
   const reply = onDelta ? await chatStream(messages, onDelta) : await chat('gm', messages);
-  const name = db.current; a.undo = snap; a.bibleEdited = false;
+  const name = db.current; a.undo = snap; a.bibleEdited = false; a.bibleSeen = bibleNow;
   if (!hidden) tr.push({ n: tr.length + 1, role: 'player', text: input });
   tr.push({ n: tr.length + 1, role: 'gm', text: reply });
   persist(name);
   memoryJob = (async () => {
     try {
       const ex = await chat('extract', [{ role: 'system', content: EXTRACT_RULES },
-        { role: 'user', content: 'Known location: ' + a.location + '\nCurrent beats:\n' + (a.beats.filter(b => b.status !== 'done').slice(-12).map(b => '- [' + b.status + '] ' + b.beat).join('\n') || '(none)') + '\nPLAYER: ' + input + '\nGAME MASTER: ' + reply }]);
+        { role: 'user', content: (changes.length ? 'PLAYER CHANGES (authoritative; update any affected entries to match them):\n' + changes.map(c => '- ' + c.text).join('\n') + '\n' : '') + 'Known location: ' + a.location + '\nCurrent beats:\n' + (a.beats.filter(b => b.status !== 'done').slice(-12).map(b => '- [' + b.status + '] ' + b.beat).join('\n') || '(none)') + '\nPLAYER: ' + input + '\nGAME MASTER: ' + reply }]);
       applyExtraction(a, ex);
     } catch (e) { console.warn('memory extraction skipped', e); }
     persist(name);
@@ -567,10 +620,11 @@ async function takeTurn(input, hidden, onDelta) {
   // Slow housekeeping (bible refresh, GM notes on the big model, chapter summaries) runs in the background and never blocks the next turn.
   slowJob = memoryJob.then(async () => {
     if (!hidden && tr.filter(t => t.role === 'player').length % BIBLE_EVERY === 0) { try { await refreshBible(a); } catch (e) { console.warn(e); } }
-    try { if (!a.gm) await makeGmNotes(a); else if (!hidden && tr.filter(t => t.role === 'player').length % BIBLE_EVERY === 0) await makeGmNotes(a, true); } catch (e) { console.warn('GM notes skipped', e); }
+    // GM notes are also revised after a hand edit, so the cast agendas stop describing the old version (e.g. old pronouns).
+    try { if (!a.gm) await makeGmNotes(a); else if (a.notesStale || (!hidden && tr.filter(t => t.role === 'player').length % BIBLE_EVERY === 0)) { await makeGmNotes(a, true); a.notesStale = false; } } catch (e) { console.warn('GM notes skipped', e); }
     try { await summarizeChunks(a); } catch (e) { console.warn(e); }
     persist(name);
-    if (db.current === name) { renderMap(); if (!loreEditing) renderLore(); }
+    if (db.current === name) { renderMap(); if (!loreEditing) renderLore(); syncBibleBox(); }
   });
   return reply;
 }
@@ -580,7 +634,7 @@ function applyExtraction(a, raw) {
   (o.lore || []).forEach(e => {
     const name = String(e.name || '').trim(); if (!name) return;
     const k = name.toLowerCase(), cur = a.lore[k] || (a.lore[k] = { name, type: 'other', desc: '', aliases: [] });
-    if (e.type) cur.type = e.type; if (e.desc) cur.desc = e.desc;
+    if (!cur.byPlayer) { if (e.type) cur.type = e.type; if (e.desc) cur.desc = e.desc; }   // never overwrite an entry the player wrote by hand
     cur.aliases = [...new Set([...(cur.aliases || []), ...(e.aliases || [])])]; cur.lastSeen = n;
     if (cur.type === 'place') addPlace(a, name);
   });
@@ -601,8 +655,19 @@ async function refreshBible(a) {
   const wi = a.bible.indexOf(WISH_HEAD), wishes = wi >= 0 ? a.bible.slice(wi).trim() : wishesSection(a), before = a.bible;   // keep the wishes block exactly as it is now (it may have been hand-edited)
   const nb = await chat('bible', [
     { role: 'system', content: 'Rewrite the story bible for a text adventure as a tight one-pager (max 450 words, markdown): premise, tone, player character, cast, setting, current situation, goals, and a "story so far" summary. Keep everything still relevant; compress old material. Do NOT include a "Player\'s Wishes" section; it is added separately. Keep any details the player wrote by hand, even if unusual. Output only the bible.' },
-    { role: 'user', content: 'CURRENT BIBLE:\n' + stripWishes(a.bible) + '\n\nMISSION MAP:\n' + mapText(a) + '\nRECENT TRANSCRIPT:\n' + recent }]);
-  if (nb && nb.trim() && a.bible === before) a.bible = stripWishes(nb.trim()) + '\n\n' + wishes;   // skip if you edited the bible while this refresh was running
+    { role: 'user', content: 'CURRENT BIBLE:\n' + stripWishes(a.bible) + '\n\n' + playerFactsText(a) + 'MISSION MAP:\n' + mapText(a) + '\nRECENT TRANSCRIPT:\n' + recent }]);
+  if (nb && nb.trim() && a.bible === before) { a.bible = stripWishes(nb.trim()) + '\n\n' + wishes; if (a.bibleSeen === before) a.bibleSeen = a.bible; }   // skip if you edited the bible while this refresh was running
+}
+// ---------------- Player edits: hand changes to the bible or lore override earlier narration ----------------
+// Bible edits are diffed against the version the GM last saw; lore saves are recorded directly and the entry is pinned (the AI no longer
+// rewrites it). Each change stays in the prompt as a PLAYER CHANGE until the old narration has left the verbatim transcript window.
+const lineDiff = (o, n) => { const old = new Set(String(o || '').split('\n').map(s => s.trim())); return String(n || '').split('\n').map(s => s.trim()).filter(s => s && !old.has(s)); };
+function noteChange(a, text) { a.changes = (a.changes || []).filter(c => c.text !== text).concat({ text, turn: playerTurns(a) }).slice(-12); a.notesStale = true; }
+const liveChanges = a => (a.changes || []).filter(c => playerTurns(a) - c.turn <= Math.ceil(RECENT_N() / 2) + 1);
+const pinnedLore = a => Object.values(a.lore).filter(e => e.byPlayer).sort((x, y) => (y.editedAt || 0) - (x.editedAt || 0)).slice(0, 15);
+function playerFactsText(a) {   // for background calls (bible refresh, GM notes): what the player set by hand, which beats the transcript
+  const p = pinnedLore(a), c = liveChanges(a);
+  return p.length || c.length ? 'PLAYER-SET FACTS (written by the player; keep them exactly, even where the transcript says otherwise):\n' + [...c.map(x => x.text), ...p.map(loreLine)].map(x => '- ' + x).join('\n') + '\n\n' : '';
 }
 const WISH_HEAD = "## Player's Wishes (from the Experience Curator)";
 function stripWishes(b) { const i = b.indexOf(WISH_HEAD); return (i >= 0 ? b.slice(0, i) : b).trim(); }
@@ -676,9 +741,9 @@ function gmText(a) {
 function parseJson(raw) { const i = raw.indexOf('{'), j = raw.lastIndexOf('}'); if (i < 0 || j < i) throw new Error('no JSON'); return JSON.parse(raw.slice(i, j + 1)); }
 async function makeGmNotes(a, revise) {
   const recentLore = Object.values(a.lore).sort((x, y) => (y.lastSeen || 0) - (x.lastSeen || 0)).slice(0, 30);   // only the 30 most recently seen entries, so this call does not grow with the lorebook
-  const ctx = 'BIBLE:\n' + stripWishes(a.bible) + '\n\nLORE:\n' + recentLore.map(loreLine).join('\n') + '\n\n' + mapText(a) +
+  const ctx = 'BIBLE:\n' + stripWishes(a.bible) + '\n\n' + playerFactsText(a) + 'LORE:\n' + recentLore.map(loreLine).join('\n') + '\n\n' + mapText(a) +
     '\nRECENT TURNS:\n' + a.transcript.slice(-6).map(t => t.role + ': ' + t.text).join('\n');
-  const raw = await chat('plan', [{ role: 'system', content: PLAN_RULES + (revise ? '\nYou are UPDATING existing notes: drop secrets the player has now discovered, add fresh ones, update thread statuses, and pick a new big_reveal only if the old one has happened.' : '') },
+  const raw = await chat('plan', [{ role: 'system', content: PLAN_RULES + (revise ? '\nYou are UPDATING existing notes: drop secrets the player has now discovered, add fresh ones, update thread statuses, and pick a new big_reveal only if the old one has happened. If PLAYER-SET FACTS are given, rewrite every note to agree with them (names, pronouns, roles).' : '') },
     { role: 'user', content: (revise ? 'CURRENT NOTES:\n' + gmText(a) + '\n\n' : '') + ctx }]);
   const g = parseJson(raw);
   if (g && (g.voice || g.secrets)) a.gm = { voice: g.voice || '', secrets: g.secrets || [], threads: g.threads || [], big_reveal: g.big_reveal || '', cast: g.cast || [] };
@@ -763,7 +828,7 @@ async function summarizeChunks(a) {
 }
 
 // ---------------- Undo last turn (restores memory too) ----------------
-const MEM_KEYS = ['bible', 'location', 'beats', 'events', 'lore', 'places', 'edges', 'chunks', 'summarizedUpTo', 'gm', 'dir'];
+const MEM_KEYS = ['bible', 'location', 'beats', 'events', 'lore', 'places', 'edges', 'chunks', 'summarizedUpTo', 'gm', 'dir', 'changes', 'bibleSeen'];
 function snapshot(a) { const mem = {}; MEM_KEYS.forEach(k => mem[k] = structuredClone(a[k])); return { mem, tlen: a.transcript.length }; }
 async function undoLast() {
   await memoryJob; await slowJob;
@@ -790,7 +855,7 @@ function renderLore() {
   let html = '<button class="mini" data-act="add">+ Add entry</button> <span class="tag">' + Object.keys(a.lore).length + ' entries. Fix duplicates with Merge.</span><div style="margin-top:10px"></div>';
   if (loreEditing === '__new') html += form('__new', {});
   html += Object.entries(a.lore).map(([k, e]) => loreEditing === k ? form(k, e) :
-    '<div class="card"><b>' + esc(e.name) + '</b> <span class="tag">' + esc(e.type || '') + (e.aliases && e.aliases.length ? ' &middot; aka ' + esc(e.aliases.join(', ')) : '') + '</span><br>' + esc(e.desc || '') +
+    '<div class="card"><b>' + esc(e.name) + '</b> <span class="tag">' + esc(e.type || '') + (e.aliases && e.aliases.length ? ' &middot; aka ' + esc(e.aliases.join(', ')) : '') + (e.byPlayer ? ' &middot; &#9998; your edit (the AI keeps it as written)' : '') + '</span><br>' + esc(e.desc || '') +
     '<br><button class="mini" data-act="edit" data-k="' + esc(k) + '">Edit</button><button class="mini" data-act="merge" data-k="' + esc(k) + '">Merge into...</button><button class="mini" data-act="del" data-k="' + esc(k) + '">Delete</button></div>').join('');
   box.innerHTML = html;
 }
@@ -799,8 +864,12 @@ function saveLore(k) {
   const nk = name.toLowerCase(), old = k !== '__new' ? a.lore[k] : null;
   if (nk !== k && a.lore[nk] && !confirm('An entry named "' + a.lore[nk].name + '" exists. Overwrite it?')) return;
   if (old && nk !== k) delete a.lore[k];
-  const type = $('loreType').value;
-  a.lore[nk] = { name, type, desc: $('loreDesc').value.trim(), aliases: $('loreAliases').value.split(',').map(s => s.trim()).filter(Boolean), lastSeen: old ? old.lastSeen : a.transcript.length };
+  const type = $('loreType').value, desc = $('loreDesc').value.trim();
+  const changed = !old || old.name !== name || old.type !== type || (old.desc || '') !== desc;
+  a.lore[nk] = { name, type, desc, aliases: $('loreAliases').value.split(',').map(s => s.trim()).filter(Boolean), lastSeen: old ? old.lastSeen : a.transcript.length,
+    byPlayer: changed || !!(old && old.byPlayer), editedAt: changed ? Date.now() : (old && old.editedAt) };
+  if (changed) noteChange(a, 'Lore ' + (old && old.name !== name ? '("' + old.name + '" is now "' + name + '") ' : '') + loreLine(a.lore[nk]).slice(5));
+  if (a.undo) { a.undo.mem.lore = a.undo.mem.lore || {}; if (old && nk !== k) delete a.undo.mem.lore[k]; a.undo.mem.lore[nk] = structuredClone(a.lore[nk]); a.undo.mem.changes = structuredClone(a.changes); }   // so Undo never reverts a hand edit
   if (type === 'place') addPlace(a, name);
   loreEditing = null; persist(); renderMap(); renderLore();
 }
@@ -864,7 +933,31 @@ const GEMINI_HOST = 'https://generativelanguage.googleapis.com/v1beta';
 const DEFAULT_TTS_STYLE = 'Narrate like a gifted audiobook reader telling an immersive adventure story: warm, expressive and unhurried, with natural pauses. Bring dialogue to life with subtle shifts in tone and pace, and let moments of tension, wonder and humour show in your voice.';
 let activeGemini = null, geminiWarned = false, geminiBlocked = false;
 const useGemini = () => (S().ttsEngine || 'gemini') === 'gemini' && !!S().key && !S().fake && !geminiBlocked;   // geminiBlocked: daily quota hit (HTTP 429), so stay on the browser voice until reload or Test voice
-function stopSpeech() { if (TTS) speechSynthesis.cancel(); if (activeGemini) { activeGemini.stop(); activeGemini = null; } }
+function stopSpeech() { blockedPlay = null; if (TTS) speechSynthesis.cancel(); if (activeGemini) { activeGemini.stop(); activeGemini = null; } }
+// iPhone/iPad Safari only lets a page start sound from a tap. A fresh new Audio() per clip, played seconds later when the API answers,
+// is refused (so narration was silent until you tapped a message). Instead, one shared <audio> element is unlocked by your first tap
+// (any tap: Send, a chip, the curator's buttons) and reused for every clip, which Safari then allows. Hands-free already worked
+// because Safari relaxes the rule while the microphone is in use.
+const player = new Audio(); player.setAttribute('playsinline', ''); player.preload = 'auto';
+const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);   // iPadOS reports itself as a Mac
+let audioUnlocked = false, blockedPlay = null, silentUrl = null, ttsPrimed = false;
+function unlockAudio() {
+  ensureAudio();   // the AudioContext (ambient sound, blips) needs a tap too
+  if (blockedPlay) { const f = blockedPlay; blockedPlay = null; f(); return; }   // a clip was refused: this tap plays it
+  if (!audioUnlocked && player.paused) {
+    silentUrl = silentUrl || URL.createObjectURL(wavFromPcm(new Uint8Array(4800), 24000));   // 0.1 s of silence
+    player.onended = player.onerror = null; player.src = silentUrl; player.play().then(() => { audioUnlocked = true; }, () => {});
+  }
+  if (IOS && TTS && !ttsPrimed) { ttsPrimed = true; try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) {} }   // same rule for the browser voice
+}
+['touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, unlockAudio, true));
+function playClip(fail) {   // plays whatever is loaded in the shared player; if the browser still refuses, waits for the next tap
+  player.play().then(() => { audioUnlocked = true; }, e => {
+    if (!e || e.name !== 'NotAllowedError') { fail(); return; }
+    voiceStatus('Tap anywhere to hear the narrator (this browser needs a tap before it plays sound).', true);
+    blockedPlay = () => { if (!handsActive) voiceStatus(''); player.play().catch(fail); };
+  });
+}
 function wavFromPcm(pcm, rate) {   // raw 16-bit mono PCM -> WAV, in case the API returns headerless audio
   const h = new DataView(new ArrayBuffer(44)), w = (o, s) => [...s].forEach((c, i) => h.setUint8(o + i, c.charCodeAt(0)));
   w(0, 'RIFF'); h.setUint32(4, 36 + pcm.length, true); w(8, 'WAVEfmt '); h.setUint32(16, 16, true); h.setUint16(20, 1, true); h.setUint16(22, 1, true);
@@ -913,8 +1006,8 @@ function makeGeminiSpeaker(done) {
     playing = true;
     it.p.then(res => {
       if (stopped) return;
-      const advance = () => { audio = null; playing = false; next++; pump(); };
-      if (res.url) { audio = new Audio(res.url); audio.onended = () => { advance(); }; audio.onerror = advance; stopAmbient(); audio.play().catch(advance); }
+      let moved = false; const advance = () => { if (moved || stopped) return; moved = true; audio = null; playing = false; next++; pump(); };
+      if (res.url) { audio = player; player.onended = player.onerror = advance; player.src = res.url; stopAmbient(); playClip(advance); }
       else { warn(res.err); if (TTS) { const bs = makeBrowserSpeaker(advance); bs.push(it.text + ' '); bs.end(); } else advance(); }
     });
   }
@@ -1117,6 +1210,11 @@ const QUESTIONS = [
   { q: 'Anything to avoid, or anything else to know?', h: 'Content boundaries, favourite books/films to echo, special requests.', c: ['Keep it PG-13', 'No gore', 'No romance', 'In the style of a classic novel', 'Nothing off limits within reason'] },
   { q: 'How long should the adventure be?', h: 'The story builds to a real ending on your last turn, then you get a report card.', c: ['5 turns (a quick vignette)', '10 turns', '20 turns', '30 turns', '100 turns (an epic)'] }
 ];
+// Follow-up asked last, only when the vibe (or genre) includes romance and the boundaries do not rule it out. Free text, no chips.
+const ROMANCE_Q = { q: 'Romance: you are a ___ who is interested in ___.', h: 'Fill in the blanks in your own words, e.g. "a retired spy who is interested in the new neighbour" or "a nervous bard who is interested in women".', c: [], ph: 'I am a ... who is interested in ...' };
+const LEN_I = 10, ROMANCE_I = QUESTIONS.length;   // answer slots: the length question, and the romance follow-up
+const wantsRomance = () => /romance|romantic|love stor|flirt/i.test((cur.answers[0] || '') + ' ' + (cur.answers[1] || '')) && !/no romance/i.test(cur.answers[9] || '');
+const curQs = () => wantsRomance() ? [...QUESTIONS, ROMANCE_Q] : QUESTIONS;
 let cur = { i: 0, answers: [], extra: {} };
 // ---------------- Extra options: if the player lingers on a question, the cheap model suggests more chips that fit their earlier answers ----------------
 const MORE_AFTER_MS = 7000;
@@ -1138,7 +1236,7 @@ function addExtraChips(list) {
 }
 function armMore() {   // (re)start the wait; every interaction restarts it, so it only fires when the player seems stuck
   clearTimeout(moreTimer); const i = cur.i;
-  if (cur.extra[i] || i === QUESTIONS.length - 1 || (S().fake ? false : !S().key)) return;
+  if (cur.extra[i] || i >= LEN_I || (S().fake ? false : !S().key)) return;   // no AI suggestions for the length or romance questions
   moreTimer = setTimeout(() => moreOptions(i), MORE_AFTER_MS);
 }
 async function moreOptions(i) {
@@ -1154,11 +1252,11 @@ async function moreOptions(i) {
   } catch (e) { console.warn('more options failed', e); if (cur.i === i) $('curMsg').textContent = ''; }
 }
 function curRender() {
-  const q = QUESTIONS[cur.i], n = QUESTIONS.length;
+  const qs = curQs(), q = qs[cur.i], n = qs.length;
   $('curBar').style.width = (cur.i / n * 100) + '%';
   $('curStep').textContent = 'Question ' + (cur.i + 1) + ' of ' + n;
   $('curQ').textContent = q.q; $('curHint').textContent = q.h;
-  $('curA').value = cur.answers[cur.i] || '';
+  $('curA').value = cur.answers[cur.i] || ''; $('curA').placeholder = q.ph || 'Type your own answer, or tap options above...';
   $('curChips').innerHTML = q.c.map(c => '<button class="chip" data-c="' + esc(c) + '">' + esc(c) + '</button>').join('');
   if (cur.extra[cur.i]) addExtraChips(cur.extra[cur.i]); else wireChips();
   $('curBack').disabled = cur.i === 0;
@@ -1173,8 +1271,8 @@ $('curSkip').onclick = () => { $('curA').value = ''; cur.answers[cur.i] = "(no p
 $('curNext').onclick = () => { curStore(); if (!cur.answers[cur.i]) cur.answers[cur.i] = "(no preference: you decide, surprise me)"; curAdvance(); };
 $('curCancel').onclick = () => { $('curator').classList.remove('on'); $('start').classList.add('on'); };
 async function curAdvance() {
-  if (cur.i < QUESTIONS.length - 1) { cur.i++; curRender(); return; }
-  const answers = QUESTIONS.map((q, i) => ({ q: q.q, a: cur.answers[i] || '(no preference)' }));
+  if (cur.i < curQs().length - 1) { cur.i++; curRender(); return; }
+  const answers = curQs().map((q, i) => ({ q: q.q, a: cur.answers[i] || '(no preference)' }));
   const suggested = (answers[0].a.split(',')[0] || 'Adventure').replace(/[^\w ]/g, '').trim().slice(0, 30) + ' ' + new Date().toISOString().slice(5, 10);
   let name = prompt('Name this experience:', suggested); if (!name) return; name = name.trim();
   if (db.adventures[name] && !confirm('"' + name + '" exists. Replace it?')) return;
@@ -1199,9 +1297,10 @@ const CREATE_RULES = `You are a story architect for an interactive text adventur
  "cast":[{"name":"","wants":"what they are pursuing right now","fears":"","secret":"","next_move":"a concrete thing they will do next, whether or not the player is present"}],
  "roadmap":[{"from":1,"to":3,"goal":"secret steering goal for these player turns"}]}
 The adventure lasts exactly the number of player turns given at the end of the questionnaire (N). The roadmap has 3-10 acts (fewer for short adventures) that cover turns 1..N with no gaps or overlaps, include a midpoint reversal and a low point, rise to a climax, and make the final act a definite, satisfying ending of the main goal. Goals are steering points for the hidden Game Master, not rigid scripts.
-Provide 4-6 beats (the first active), 3-6 lore entries, and a cast of 3-5 characters with conflicting motivations. Where an answer says "surprise me", invent something fitting the other answers. Respect content boundaries. No commentary, no markdown fences.`;
+Provide 4-6 beats (the first active), 3-6 lore entries, and a cast of 3-5 characters with conflicting motivations. Where an answer says "surprise me", invent something fitting the other answers. Respect content boundaries.
+If there is a Romance answer ("you are a ... who is interested in ..."), it defines who the player character is and who they are drawn to: put it in the bible, build at least one fitting love interest into the cast and lore (with their own wants, secrets and agency, never just a prize), and let the romance develop gradually with real obstacles, alongside the main plot rather than replacing it. No commentary, no markdown fences.`;
 // ---------------- Adventure length, secret roadmap and the final report card ----------------
-function lengthOf(answers) { const m = /\d+/.exec((answers[answers.length - 1] || {}).a || ''); return m ? Math.max(3, Math.min(200, +m[0])) : 20; }
+function lengthOf(answers) { const m = /\d+/.exec((answers[LEN_I] || {}).a || ''); return m ? Math.max(3, Math.min(200, +m[0])) : 20; }
 function defaultRoadmap(N) {
   const goals = ['Establish the world and the player\'s place in it; set the hook.', 'Escalate: complications, allies and enemies emerge; the first secrets surface.', 'Crisis and twist: the central secret is revealed and the stakes turn personal.', 'Climax and resolution: the main goal is won, lost or transformed, with a definite ending.'];
   const cuts = [0, 0.25, 0.6, 0.85, 1], out = []; let from = 1;
@@ -1280,9 +1379,10 @@ async function createAdventure(name, answers, cats) {
   } else {
     const g = x => (answers[x].a || '');
     a.bible = '# Story Bible\n\n**Premise:** A ' + g(0) + ' adventure with a ' + g(1) + ' tone.\n\n**Player character:** ' + g(2) + '. Strengths/flaws: ' + g(3) +
-      '.\n\n**Setting:** ' + g(4) + '.\n\n**Central hook:** ' + g(5) + '.\n\n**Allies:** ' + g(6) + '.\n\n**Main threat:** ' + g(7) + '.\n\n**Style of play:** ' + g(8) + '.';
+      '.\n\n**Setting:** ' + g(4) + '.\n\n**Central hook:** ' + g(5) + '.\n\n**Allies:** ' + g(6) + '.\n\n**Main threat:** ' + g(7) + '.\n\n**Style of play:** ' + g(8) + '.' +
+      (answers[ROMANCE_I] ? '\n\n**Romance:** ' + g(ROMANCE_I) + '.' : '');
   }
-  a.bible += '\n\n' + wishesSection(a);
+  a.bible += '\n\n' + wishesSection(a); a.bibleSeen = a.bible;
   db.adventures[name] = a; db.current = name; persist(name);
 }
 
@@ -1312,6 +1412,7 @@ $('closeFinale').onclick = () => $('finale').classList.remove('on');
 $('finaleMenu').onclick = () => { $('finale').classList.remove('on'); renderStart(); $('start').classList.add('on'); };
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('start').classList.contains('on') && A()) $('start').classList.remove('on'); });
 async function enterAdventure(name, isNew) {
+  flushEdits(); loreEditing = null; bibleDirty = false;   // save edits to the adventure you are leaving first
   db.current = name; persist(name); $('start').classList.remove('on'); showTab('story'); refresh();
   if (isNew) await send(); else if (A() && A().result) showFinale(A()); else recap();
 }
@@ -1351,35 +1452,43 @@ function renderStory() {
   bulk = true; a.transcript.forEach(t => addMsg(t.role === 'player' ? 'pl' : 'gm', t.text)); bulk = false; fitLast();
   if (!a.transcript.length) addMsg('sys', 'Press Send to begin the adventure.');
   if (a.result) { const m = addMsg('sys', 'The adventure is complete. Tap here to see your report card.'); m.style.cursor = 'pointer'; m.onclick = () => showFinale(a); }
+  if (pendingNotice) { addMsg('sys', pendingNotice); pendingNotice = ''; }
 }
 function renderPanels() {
   const a = A(); showUsage();
   $('advName').textContent = (db.current || '') + (a && a.length ? ' · turn ' + Math.min(playerTurns(a), a.length) + '/' + a.length : '');
-  if (document.activeElement !== $('bibleEdit')) $('bibleEdit').value = a ? a.bible : '';   // never overwrite text being typed
+  syncBibleBox();
   renderMap();
-  $('lore').innerHTML = a ? (Object.values(a.lore).map(e => '<div class="card"><b>' + esc(e.name) + '</b> <span class="tag">' + esc(e.type || '') + (e.aliases && e.aliases.length ? ' · aka ' + esc(e.aliases.join(', ')) : '') + '</span><br>' + esc(e.desc || '') + '</div>').join('') || '<span class="tag">No lore yet.</span>') : '';
-  renderLore();
+  if (!loreEditing) renderLore();   // re-rendering an open edit form would wipe what is being typed
   $('usage').textContent = 'Browser storage used: ' + (new Blob([localStorage.getItem(KEY) || '']).size / 1024).toFixed(1) + ' KB of about 5,000 KB.';
 }
 function refresh() { renderStory(); renderPanels(); }
-function showTab(t) { document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x.dataset.t === t)); document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.id === t)); if (t !== 'story') renderPanels(); else fitLast(); }
+function showTab(t) { flushEdits(); document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x.dataset.t === t)); document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.id === t)); if (t !== 'story') renderPanels(); else fitLast(); }
 document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => showTab(b.dataset.t));
 function showSub(p) { document.querySelectorAll('#subnav button').forEach(x => x.classList.toggle('on', x.dataset.p === p)); document.querySelectorAll('#settings .sp').forEach(x => x.classList.toggle('on', x.dataset.p === p)); }
 document.querySelectorAll('#subnav button').forEach(b => b.onclick = () => showSub(b.dataset.p));
 $('startSettings').addEventListener('click', () => showSub('conn'));
 $('saveBible').onclick = () => saveBibleNow();
 // Bible edits autosave (debounced + on leaving the box) and are flagged so the Game Master is told about them on the next reply.
-let bibleTimer = null;
+let bibleTimer = null, bibleDirty = false;
 function saveBibleNow() {
-  clearTimeout(bibleTimer);
+  clearTimeout(bibleTimer); bibleDirty = false;
   const a = A(); if (!a) return;
   const v = $('bibleEdit').value; if (v === a.bible) { $('bibleStatus').textContent = 'Up to date.'; return; }
-  a.bible = v; a.bibleEdited = true;
+  a.bible = v;   // takeTurn diffs this against the version the GM last saw and tells it exactly what changed
   if (a.undo) a.undo.mem.bible = v;   // so Undo never reverts a hand edit
   persist(); $('bibleStatus').textContent = 'Saved ' + new Date().toLocaleTimeString() + '. Takes effect from your next message.';
 }
-$('bibleEdit').addEventListener('input', () => { $('bibleStatus').textContent = 'Editing...'; clearTimeout(bibleTimer); bibleTimer = setTimeout(saveBibleNow, 700); });
-$('bibleEdit').addEventListener('blur', saveBibleNow);
+// Shows the latest bible (the AI refreshes it in the background) unless you are in the middle of editing it.
+function syncBibleBox() { const a = A(); if (document.activeElement !== $('bibleEdit') && !bibleDirty) $('bibleEdit').value = a ? a.bible : ''; }
+// Saves any unsaved bible or lore edit. Called on Send, tab changes and adventure switches, because iPad Safari often does not fire
+// "blur" when you tap a button, and an open lore form (which has its own Save button) was silently dropped.
+function flushEdits() {
+  if (bibleDirty) saveBibleNow();
+  if (loreEditing && A() && $('loreName')) { if ($('loreName').value.trim()) saveLore(loreEditing); else loreEditing = null; }
+}
+$('bibleEdit').addEventListener('input', () => { bibleDirty = true; $('bibleStatus').textContent = 'Editing...'; clearTimeout(bibleTimer); bibleTimer = setTimeout(saveBibleNow, 700); });
+$('bibleEdit').addEventListener('blur', () => { if (bibleDirty) saveBibleNow(); });
 
 let dictated = false;   // set when a message came from hands-free dictation
 const CLEAN_RULES = `You clean up speech-to-text for a text adventure player. Fix ONLY transcription damage: misheard words and wrong homophones (use the story context to decide, e.g. "insect" is probably "instinct", "Steam Fisher" is probably "steam vent"), garbled character or place names (use the supplied story names), filler words (uh, um, you know), stuttered repeats and abandoned false starts, and punctuation and capitalisation. Keep the player's meaning, first-person voice, order and level of detail exactly; never add, remove or reinterpret ideas, and never answer or continue the story. If the text is already fine, return it unchanged. Output ONLY the corrected text.`;
@@ -1397,6 +1506,7 @@ async function cleanDictation(text) {
 }
 async function send() {
   if (busy || !A()) return;
+  flushEdits();
   const wasDictated = dictated; dictated = false;
   { const a0 = A();
     if (a0.result) { showFinale(a0); return; }
@@ -1506,9 +1616,13 @@ function collectSettings() {
 function keyStatus() {
   const k = S().key;
   $('keyStatus').textContent = (k ? 'Key saved (ends in ' + k.slice(-4) + '). ' : 'No key saved yet. ') + 'Endpoint: ' + (S().base || DEFAULTS.base) +
-    ' | story model: ' + (S().model || DEFAULTS.model) + ' | cheap model: ' + (S().cheap || DEFAULTS.cheap) + (S().fake ? ' | OFFLINE TEST MODE IS ON' : '');
+    ' | story model: ' + (S().model || DEFAULTS.model) + ' | cheap model: ' + (S().cheap || DEFAULTS.cheap) + (S().freeTier ? ' | FREE-TIER KEY: the story uses the cheap model' : '') + (S().fake ? ' | OFFLINE TEST MODE IS ON' : '');
 }
-function autoSave() { const voice = $('setVoice').value; db.settings = collectSettings(); if (!voice && S().voice === '') delete db.settings.voice; persist(); keyStatus(); }
+function autoSave() {
+  const voice = $('setVoice').value, old = db.settings; db.settings = collectSettings();
+  if (old.freeTier && old.key === S().key && (old.model || DEFAULTS.model) === S().model) db.settings.freeTier = true;   // a new key or story model gets re-checked
+  if (!voice && S().voice === '') delete db.settings.voice; persist(); keyStatus();
+}
 $('saveSet').onclick = () => { autoSave(); alert('Settings saved.'); };
 document.querySelectorAll('#settings input:not([type=file]), #settings select, #settings textarea').forEach(el => { el.addEventListener('change', autoSave); if (el.type === 'password' || el.type === 'text' || el.tagName === 'TEXTAREA') el.addEventListener('input', autoSave); });
 $('testConn').onclick = async () => {
@@ -1522,11 +1636,12 @@ $('testConn').onclick = async () => {
     const chatM = ids.filter(i => /^gemini/.test(i) && !/embed|tts|image|live|audio|vision/.test(i));
     const add = (id, list) => { const el = $(id); list.forEach(v => { if (![...el.options].some(o => o.value === v)) el.insertBefore(new Option(v, v), el.lastChild); }); };
     add('setModel', chatM); add('setCheap', chatM); add('setEmbed', ids.filter(i => /embed/.test(i))); add('setTtsModel', ids.filter(i => /tts/.test(i)));
-    st.textContent = 'Key works. ' + ids.length + ' models found; the model pickers above now list the ones available to you. Choose your story and cheap models there.';
+    st.textContent = 'Key works. ' + ids.length + ' models found; the model pickers above now list the ones available to you. Checking which tier your key is on...';
+    st.textContent = st.textContent.replace(/Checking.*$/, '') + await probeTier();
   } catch (e) { st.textContent = 'Failed: ' + e.message; }
 };
 function closeWelcome() { db.settings.welcomed = true; persist(); $('welcome').classList.remove('on'); }
-$('wStart').onclick = () => { const k = $('wKey').value.trim(); if (!k) { alert('Paste your API key first, or choose the offline demo.'); return; } $('setKey').value = k; autoSave(); closeWelcome(); $('newExpBtn').click(); };
+$('wStart').onclick = () => { const k = $('wKey').value.trim(); if (!k) { alert('Paste your API key first, or choose the offline demo.'); return; } $('setKey').value = k; autoSave(); closeWelcome(); probeTier(); $('newExpBtn').click(); };   // the tier check runs while you answer the questions
 $('wDemo').onclick = () => { $('setFake').checked = true; autoSave(); closeWelcome(); $('newExpBtn').click(); };
 $('wSkip').onclick = closeWelcome;
 if (!S().key && !S().fake && !S().welcomed && !Object.keys(db.adventures).length) $('welcome').classList.add('on');
