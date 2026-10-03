@@ -72,6 +72,12 @@
   .mini{padding:2px 8px;font-size:13px;margin-right:4px}
   .lf input,.lf select,.lf textarea{width:100%;margin-bottom:6px}
   #undoBtn{padding:8px 12px}
+  .subnav{display:flex;gap:6px;margin:0 0 14px;flex-wrap:wrap}
+  .subnav button{border-radius:999px;padding:6px 14px;font-size:14px;color:var(--dim)}
+  .subnav button.on{background:var(--accent);color:#012;border-color:var(--accent)}
+  .sp{display:none}.sp.on{display:block}
+  .grp{border:1px solid var(--line);border-radius:10px;padding:2px 12px 12px;margin:0 0 14px}
+  .grp>b{display:block;margin-top:10px;color:var(--accent);font-size:13px;letter-spacing:.06em}
   .chip.ai{border-style:dashed}
   .grade{font-size:56px;font-weight:700;color:var(--accent);line-height:1}
   #finale ul{margin:4px 0 10px;padding-left:20px}
@@ -101,68 +107,119 @@
     </div>
     <div id="lore" class="tab"></div>
     <div id="settings" class="tab">
-      <label>API key</label>
-      <div class="row"><input id="setKey" type="password" placeholder="sk-..." autocomplete="off"></div>
-      <div class="warn">Stored only in this browser (localStorage) and sent only to the endpoint below. Use a key with a low spending cap.</div>
-      <p class="tag" id="keyStatus"></p>
       <p class="warn" id="originWarn" style="display:none"></p>
-      <label>Base URL (any OpenAI-compatible endpoint)</label>
-      <div class="row"><input id="setBase" placeholder="https://generativelanguage.googleapis.com/v1beta/openai"></div>
-      <label>Story model</label>
-      <div class="row"><select id="setModel" style="width:100%"></select></div>
-      <label>Story thinking effort (lower = faster first word)</label>
-      <div class="row"><select id="setEffort" style="width:100%"><option value="minimal">Minimal (fastest)</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="">Model default (deepest; recommended for Pro)</option></select></div>
-      <b style="display:block;margin-top:16px">Tuning (try these to trade cost against continuity)</b>
-      <label>Recent turns sent verbatim (transcript entries; 2 per exchange)</label>
-      <div class="row"><select id="setTuneRecent" style="width:100%"><option value="4">4 (cheapest)</option><option value="6">6</option><option value="8">8 (default)</option><option value="10">10</option><option value="12">12 (original)</option><option value="16">16 (richest)</option></select></div>
-      <label>Chapter summaries in the prompt</label>
-      <div class="row"><select id="setTuneChapters" style="width:100%"><option value="2">2</option><option value="4">4</option><option value="6">6 (default)</option><option value="8">8</option><option value="12">12</option></select></div>
-      <label>Recalled memories per turn</label>
-      <div class="row"><select id="setTuneRecall" style="width:100%"><option value="3">3</option><option value="4">4</option><option value="6">6 (default)</option><option value="8">8</option><option value="10">10</option></select></div>
-      <label>Model for GM secrets and plot notes (every 10 turns)</label>
-      <div class="row"><select id="setNotesModel" style="width:100%"><option value="story">Story model (richer twists)</option><option value="cheap">Cheap model (saves credits)</option></select></div>
-      <label>Prices for the cost estimate, USD per 1M tokens: story in, story out, cheap in, cheap out, audio out</label>
-      <div class="row"><input id="setPrices" placeholder="2,12,0.5,3,10"></div>
-      <p class="tag">The bar above the message box shows tokens and an estimated cost per turn and per adventure. It is only as accurate as these prices, so check them against your Google billing page.</p>
-      <label>Cheap model (memory extraction and bible refresh)</label>
-      <div class="row"><select id="setCheap" style="width:100%"></select></div>
-      <label>Embedding model (smarter memory recall; same endpoint and key)</label>
-      <div class="row"><select id="setEmbed" style="width:100%"></select></div>
-      <label><input type="checkbox" id="setNoEmbed" style="width:auto"> Disable embeddings (keyword recall only)</label>
-      <label><input type="checkbox" id="setFake" style="width:auto"> Offline test mode (fake AI, no API calls)</label>
-      <hr style="border-color:var(--line);margin:20px 0">
-      <b>Voice</b>
-      <p class="tag">Tap Hands-free (next to Send) once and the microphone stays on: say "end dictation" to send. Tap a Game Master message to hear it again. Speech recognition uses your browser's built-in service (Chrome and Edge send the audio to Google or Microsoft servers to transcribe it), so avoid it for anything sensitive.</p>
-      <label><input type="checkbox" id="setSpeak" style="width:auto"> Read Game Master replies aloud</label>
-      <label>Background sound while waiting</label>
-      <div class="row"><select id="setAmbient" style="width:100%"><option value="">Default (soft focus pad in hands-free mode, otherwise off)</option><option value="calm">Soft focus pad</option><option value="auto">Match the scene</option><option value="waves">Ocean waves</option><option value="rain">Rain</option><option value="wind">Wind</option><option value="off">Off</option></select></div>
-      <label>Voice</label>
-      <div class="row"><select id="setVoice" style="width:100%"></select></div>
-      <label>Speed <input type="range" id="setRate" min="0.7" max="1.4" step="0.05" value="1" style="width:100%"></label>
-      <label>Voice engine</label>
-      <div class="row"><select id="setEngine" style="width:100%"><option value="browser">Browser voice (free; more robotic)</option><option value="gemini">Gemini narrator voice (uses your Google key; natural, expressive)</option></select></div>
-      <label>Gemini narrator voice</label>
-      <div class="row"><select id="setTtsVoice" style="width:100%"></select></div>
-      <div class="row"><input id="setTtsVoiceCustom" placeholder="Custom voice ID (for example voice_...)" style="display:none"></div>
-      <label>Gemini speech model</label>
-      <div class="row"><select id="setTtsModel" style="width:100%"></select></div>
-      <label>Voice requests per reply (your Google tier limits requests per day). The first clip is always short for a fast start; later clips grow up to this size.</label>
-      <div class="row"><select id="setTtsChunk" style="width:100%"><option value="700">Smoother: about 4 requests per reply</option><option value="2000">Fewest: about 3 requests per reply (default)</option></select></div>
-      <label>Narration style (how it should be read)</label>
-      <div class="row"><textarea id="setTtsStyle" rows="4" style="width:100%"></textarea></div>
-      <button id="testVoice">Test voice</button>
-      <br><button id="saveSet" class="primary">Save settings</button>
-      <hr style="border-color:var(--line);margin:20px 0">
-      <b>Save to a folder on this computer</b> <span class="tag">(Chrome / Edge)</span>
-      <p class="tag">Pick a folder once. Each adventure is written to its own file (<code>&lt;name&gt;.json</code>) after every turn. The API key is never written to these files.</p>
-      <button id="dirBtn">Choose save folder</button>
-      <button id="reconBtn" style="display:none">Reconnect saved folder</button>
-      <p class="tag" id="dirStatus">No folder linked.</p>
-      <hr style="border-color:var(--line);margin:20px 0">
-      <button id="expBtn">Export all (backup)</button>
-      <button id="impBtn">Import backup / adventure file</button>
-      <input type="file" id="impFile" accept=".json" style="display:none">
-      <p class="tag" id="usage"></p>
+      <div class="subnav" id="subnav">
+        <button data-p="conn" class="on">Connection</button>
+        <button data-p="story">Story &amp; cost</button>
+        <button data-p="voice">Voice &amp; sound</button>
+        <button data-p="data">Data</button>
+      </div>
+
+      <section class="sp on" data-p="conn">
+        <div class="grp">
+          <b>AI PROVIDER</b>
+          <label>API key</label>
+          <div class="row"><input id="setKey" type="password" placeholder="sk-..." autocomplete="off"></div>
+          <div class="warn">Stored only in this browser (localStorage) and sent only to the endpoint below. Use a key with a low spending cap.</div>
+          <p class="tag" id="keyStatus"></p>
+          <label>Base URL (any OpenAI-compatible endpoint)</label>
+          <div class="row"><input id="setBase" placeholder="https://generativelanguage.googleapis.com/v1beta/openai"></div>
+        </div>
+        <div class="grp">
+          <b>MODELS</b>
+          <label>Story model</label>
+          <div class="row"><select id="setModel" style="width:100%"></select></div>
+          <label>Cheap model (memory extraction and bible refresh)</label>
+          <div class="row"><select id="setCheap" style="width:100%"></select></div>
+          <label>Embedding model (smarter memory recall; same endpoint and key)</label>
+          <div class="row"><select id="setEmbed" style="width:100%"></select></div>
+          <label><input type="checkbox" id="setNoEmbed" style="width:auto"> Disable embeddings (keyword recall only)</label>
+        </div>
+        <div class="grp">
+          <b>TESTING</b>
+          <label><input type="checkbox" id="setFake" style="width:auto"> Offline test mode (fake AI, no API calls)</label>
+        </div>
+      </section>
+
+      <section class="sp" data-p="story">
+        <div class="grp">
+          <b>STORY ENGINE</b>
+          <label>Story thinking effort (lower = faster first word)</label>
+          <div class="row"><select id="setEffort" style="width:100%"><option value="minimal">Minimal (fastest)</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="">Model default (deepest; recommended for Pro)</option></select></div>
+          <label>Model for GM secrets and plot notes (every 10 turns)</label>
+          <div class="row"><select id="setNotesModel" style="width:100%"><option value="story">Story model (richer twists)</option><option value="cheap">Cheap model (saves credits)</option></select></div>
+        </div>
+        <div class="grp">
+          <b>MEMORY &amp; PROMPT SIZE</b>
+          <p class="tag">Trade cost against continuity.</p>
+          <label>Recent turns sent verbatim (transcript entries; 2 per exchange)</label>
+          <div class="row"><select id="setTuneRecent" style="width:100%"><option value="4">4 (cheapest)</option><option value="6">6</option><option value="8">8 (default)</option><option value="10">10</option><option value="12">12 (original)</option><option value="16">16 (richest)</option></select></div>
+          <label>Chapter summaries in the prompt</label>
+          <div class="row"><select id="setTuneChapters" style="width:100%"><option value="2">2</option><option value="4">4</option><option value="6">6 (default)</option><option value="8">8</option><option value="12">12</option></select></div>
+          <label>Recalled memories per turn</label>
+          <div class="row"><select id="setTuneRecall" style="width:100%"><option value="3">3</option><option value="4">4</option><option value="6">6 (default)</option><option value="8">8</option><option value="10">10</option></select></div>
+        </div>
+        <div class="grp">
+          <b>COST ESTIMATE</b>
+          <label>Prices, USD per 1M tokens: story in, story out, cheap in, cheap out, audio out</label>
+          <div class="row"><input id="setPrices" placeholder="2,12,0.5,3,10"></div>
+          <p class="tag">The bar above the message box shows tokens and an estimated cost per turn and per adventure. It is only as accurate as these prices, so check them against your Google billing page.</p>
+        </div>
+      </section>
+
+      <section class="sp" data-p="voice">
+        <div class="grp">
+          <b>NARRATION</b>
+          <p class="tag">Tap Hands-free (next to Send) once and the microphone stays on: say "end dictation" to send. Tap a Game Master message to hear it again. Speech recognition uses your browser's built-in service (Chrome and Edge send the audio to Google or Microsoft servers to transcribe it), so avoid it for anything sensitive.</p>
+          <label><input type="checkbox" id="setSpeak" style="width:auto"> Read Game Master replies aloud</label>
+          <label>Voice engine</label>
+          <div class="row"><select id="setEngine" style="width:100%"><option value="browser">Browser voice (free; more robotic)</option><option value="gemini">Gemini narrator voice (uses your Google key; natural, expressive)</option></select></div>
+        </div>
+        <div class="grp">
+          <b>GEMINI NARRATOR (DEFAULT)</b>
+          <label>Narrator voice</label>
+          <div class="row"><select id="setTtsVoice" style="width:100%"></select></div>
+          <div class="row"><input id="setTtsVoiceCustom" placeholder="Custom voice ID (for example voice_...)" style="display:none"></div>
+          <label>Speech model</label>
+          <div class="row"><select id="setTtsModel" style="width:100%"></select></div>
+          <label>Voice requests per reply (your Google tier limits requests per day). The first clip is always short for a fast start; later clips grow up to this size.</label>
+          <div class="row"><select id="setTtsChunk" style="width:100%"><option value="700">Smoother: about 4 requests per reply</option><option value="2000">Fewest: about 3 requests per reply (default)</option></select></div>
+          <label>Narration style (how it should be read)</label>
+          <div class="row"><textarea id="setTtsStyle" rows="4" style="width:100%"></textarea></div>
+        </div>
+        <div class="grp">
+          <b>BROWSER VOICE (FALLBACK)</b>
+          <p class="tag">Used when the Gemini voice is switched off, unavailable or out of quota. Defaults to Microsoft Ana Online (Natural) when your browser has it.</p>
+          <label>Voice</label>
+          <div class="row"><select id="setVoice" style="width:100%"></select></div>
+          <label>Speed <input type="range" id="setRate" min="0.7" max="1.4" step="0.05" value="1" style="width:100%"></label>
+        </div>
+        <div class="grp">
+          <b>BACKGROUND SOUND</b>
+          <label>Sound while the story is being prepared</label>
+          <div class="row"><select id="setAmbient" style="width:100%"><option value="">Default (soft focus pad in hands-free mode, otherwise off)</option><option value="calm">Soft focus pad</option><option value="auto">Match the scene</option><option value="waves">Ocean waves</option><option value="rain">Rain</option><option value="wind">Wind</option><option value="off">Off</option></select></div>
+        </div>
+        <button id="testVoice">Test voice</button>
+      </section>
+
+      <section class="sp" data-p="data">
+        <div class="grp">
+          <b>SAVE TO A FOLDER ON THIS COMPUTER</b> <span class="tag">(Chrome / Edge)</span>
+          <p class="tag">Pick a folder once. Each adventure is written to its own file (<code>&lt;name&gt;.json</code>) after every turn. The API key is never written to these files.</p>
+          <button id="dirBtn">Choose save folder</button>
+          <button id="reconBtn" style="display:none">Reconnect saved folder</button>
+          <p class="tag" id="dirStatus">No folder linked.</p>
+        </div>
+        <div class="grp">
+          <b>BACKUP</b>
+          <p><button id="expBtn">Export all (backup)</button>
+          <button id="impBtn">Import backup / adventure file</button></p>
+          <input type="file" id="impFile" accept=".json" style="display:none">
+          <p class="tag" id="usage"></p>
+        </div>
+      </section>
+
+      <div style="margin-top:6px"><button id="saveSet" class="primary">Save settings</button> <span class="tag">Changes also save automatically.</span></div>
     </div>
   </main>
   <div id="usageBar" class="tag" style="padding:4px 10px;border-top:1px solid var(--line);font-size:12px" title="Estimated from token counts returned by the API. Edit prices in Settings > Tuning."></div>
@@ -750,6 +807,8 @@ async function recap() {
 // ---------------- Voice (speech in / speech out) ----------------
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const TTS = 'speechSynthesis' in window;
+const FALLBACK_VOICE = 'Microsoft Ana Online (Natural)';   // Edge's names look like "Microsoft Ana Online (Natural) - English (United States)"
+function browserVoice() { const vs = speechSynthesis.getVoices(); return vs.find(v => v.name === S().voice) || vs.find(v => v.name.startsWith(FALLBACK_VOICE)) || null; }
 let rec = null, listening = false, handsActive = false, lastReply = null;
 
 function chunkText(t) {   // Chrome cuts long utterances off, so speak sentence-sized pieces
@@ -836,7 +895,7 @@ function speak(text, done, force) {
 function speakBrowser(text, done, force) {
   if (!TTS || !(S().speak || force)) { if (done) done(); return; }
   speechSynthesis.cancel();
-  const parts = chunkText(text), voice = speechSynthesis.getVoices().find(v => v.name === S().voice);
+  const parts = chunkText(text), voice = browserVoice();
   if (!parts.length) { if (done) done(); return; }
   parts.forEach((p, i) => {
     const u = new SpeechSynthesisUtterance(p);
@@ -852,7 +911,7 @@ function makeBrowserSpeaker(done) {
   const finish = () => { if (ended && pending === 0 && !fired) { fired = true; if (done) done(); } };
   const say = t => {
     t = String(t).replace(/[*_#>`]/g, '').replace(/\s+/g, ' ').trim(); if (!t) return;
-    const u = new SpeechSynthesisUtterance(t), v = speechSynthesis.getVoices().find(x => x.name === S().voice);
+    const u = new SpeechSynthesisUtterance(t), v = browserVoice();
     if (v) u.voice = v; u.rate = +S().rate || 1;
     pending++; u.onstart = stopAmbient; u.onend = u.onerror = () => { pending--; finish(); };
     speechSynthesis.speak(u);
@@ -869,7 +928,8 @@ function initVoices() {
     const lang = (navigator.language || 'en').slice(0, 2).toLowerCase();
     const sorted = [...vs].sort((a, b) => (b.lang.toLowerCase().startsWith(lang) - a.lang.toLowerCase().startsWith(lang)) || a.name.localeCompare(b.name));
     $('setVoice').innerHTML = sorted.map(v => '<option value="' + esc(v.name) + '">' + esc(v.name + ' (' + v.lang + ')') + '</option>').join('');
-    if (S().voice) $('setVoice').value = S().voice;
+    const want = (vs.find(v => v.name === S().voice) || vs.find(v => v.name.startsWith(FALLBACK_VOICE)) || {}).name;   // saved choice, else Microsoft Ana Online (Natural)
+    if (want) $('setVoice').value = want;
   };
   fill(); speechSynthesis.onvoiceschanged = fill;
 }
@@ -1253,6 +1313,9 @@ function renderPanels() {
 function refresh() { renderStory(); renderPanels(); }
 function showTab(t) { document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x.dataset.t === t)); document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.id === t)); if (t !== 'story') renderPanels(); else fitLast(); }
 document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => showTab(b.dataset.t));
+function showSub(p) { document.querySelectorAll('#subnav button').forEach(x => x.classList.toggle('on', x.dataset.p === p)); document.querySelectorAll('#settings .sp').forEach(x => x.classList.toggle('on', x.dataset.p === p)); }
+document.querySelectorAll('#subnav button').forEach(b => b.onclick = () => showSub(b.dataset.p));
+$('startSettings').addEventListener('click', () => showSub('conn'));
 $('saveBible').onclick = () => saveBibleNow();
 // Bible edits autosave (debounced + on leaving the box) and are flagged so the Game Master is told about them on the next reply.
 let bibleTimer = null;
@@ -1322,7 +1385,8 @@ function loadTtsVoice() {
   syncTtsVoiceUI();
 }
 const ttsVoiceValue = () => $('setTtsVoice').value === '__custom' ? ($('setTtsVoiceCustom').value.trim() || DEFAULT_TTS_VOICE) : $('setTtsVoice').value;
-function loadSettings() { if (S().effortV !== 2) { db.settings.effort = ''; db.settings.effortV = 2; }   // one-time: full Pro depth by default
+function loadSettings() { if (S().voiceV !== 1) { delete db.settings.voice; db.settings.voiceV = 1; }   // one-time: switch the fallback browser voice to Microsoft Ana Online (Natural)
+  if (S().effortV !== 2) { db.settings.effort = ''; db.settings.effortV = 2; }   // one-time: full Pro depth by default
   if (S().ttsV !== 1) { db.settings.ttsEngine = 'gemini'; db.settings.speak = true; db.settings.ttsV = 1; }   // one-time: Gemini narrator voice and reading aloud are on by default
   $('setEffort').value = S().effort === undefined ? '' : S().effort;
   $('setTuneRecent').value = tune('recent'); $('setTuneChapters').value = tune('chapters'); $('setTuneRecall').value = tune('recall');
@@ -1367,7 +1431,7 @@ loadSettings(); refresh(); renderStart(); initDir(); initVoices();
 
 // ---------------- Settings: autosave + diagnostics ----------------
 function collectSettings() {
-  return { effort: $('setEffort').value, effortV: 2, ttsV: 1, tune_recent: +$('setTuneRecent').value, tune_chapters: +$('setTuneChapters').value, tune_recall: +$('setTuneRecall').value,
+  return { effort: $('setEffort').value, effortV: 2, ttsV: 1, voiceV: 1, tune_recent: +$('setTuneRecent').value, tune_chapters: +$('setTuneChapters').value, tune_recall: +$('setTuneRecall').value,
     notesModel: $('setNotesModel').value, ttsChunk: +$('setTtsChunk').value, prices: $('setPrices').value.trim() || DEFAULT_PRICES, key: $('setKey').value.trim(), base: $('setBase').value.trim(), model: $('setModel').value.trim(), cheap: $('setCheap').value.trim(), fake: $('setFake').checked,
     embed: $('setEmbed').value.trim(), noEmbed: $('setNoEmbed').checked, speak: $('setSpeak').checked, ambient: $('setAmbient').value,
     voice: $('setVoice').value, rate: +$('setRate').value, ttsEngine: $('setEngine').value, ttsVoice: ttsVoiceValue(), ttsModel: $('setTtsModel').value.trim(), ttsStyle: $('setTtsStyle').value.trim() };
