@@ -192,6 +192,7 @@
         <div class="grp">
           <b>BROWSER VOICE (FALLBACK)</b>
           <p class="tag">Used when the Gemini voice is off, unavailable or out of quota. On iPhone and iPad the app lets Safari use its own default voice: web pages can only use Apple's basic built-in voices there (downloaded Enhanced or Premium voices are not available to Safari), so it sounds robotic. On a computer, Automatic picks the best voice (marked &#9733;), such as Microsoft Ana Online (Natural) on Edge.</p>
+          <p class="warn"><b>Hear nothing on iPhone or iPad?</b> Silent Mode mutes the device voice and the background sounds (the Gemini voice still plays). To turn it off, swipe down from the top-right corner of the screen to open Control Center and tap the bell so it is no longer crossed out. Older iPads and iPhones may have a switch on the side instead; newer iPhones can also use the Action button.</p>
           <label>Voice</label>
           <div class="row"><select id="setVoice" style="width:100%"></select></div>
           <label>Speed <input type="range" id="setRate" min="0.7" max="1.4" step="0.05" value="1" style="width:100%"></label>
@@ -1059,7 +1060,7 @@ function makeGeminiSpeaker(done) {
   let buf = '', pend = '', q = [], ended = false, fired = false, playing = false, next = 0, target = 130, stopped = false, audio = null;
   const clean = t => t.replace(/[*_#>`]/g, '').replace(/\s+/g, ' ').trim();
   const warn = e => { if (geminiWarned) return; geminiWarned = true; console.warn(e);
-    addMsg('sys', /HTTP 429/.test(e.message) ? 'The Gemini voice has reached its limit for now, so the browser voice reads the story instead.' : 'Gemini voice unavailable (' + String(e.message).slice(0, 140) + '). Using the browser voice instead.'); };
+    addMsg('sys', (/HTTP 429/.test(e.message) ? 'The Gemini voice has reached its limit for now, so the device voice reads the story instead.' : 'Gemini voice unavailable (' + String(e.message).slice(0, 140) + '). Using the device voice instead.') + (IOS ? ' ' + SILENT_TIP : '')); };
   function flush() {
     const t = clean(pend); pend = ''; if (!t) return; target = Math.min(target * 3, Math.max(400, +mode || 2000));
     q.push({ text: t, p: geminiTTS(t).then(url => ({ url }), err => ({ err })) }); pump();
@@ -1152,13 +1153,15 @@ function initVoices() {
 }
 $('setVoice').addEventListener('change', () => { if ($('setVoice').value) db.settings.voice = $('setVoice').value; else delete db.settings.voice; voiceSuspect = false; persist(); });
 // ---------------- Voice tests with a step-by-step readout (so problems on a phone or tablet can be seen) ----------------
+// Silent Mode mutes the device voice (and the soft background sounds) on iPhone and iPad, while the Gemini voice still plays.
+const SILENT_TIP = 'Hearing nothing from the device voice? Your iPad or iPhone is probably in Silent Mode, which mutes it (the Gemini voice still plays). To turn Silent Mode off: swipe down from the top-right corner of the screen to open Control Center, then tap the bell so it is no longer crossed out. On an iPhone you can also use the Ring/Silent switch or the Action button on the left side.';
 const TEST_LINE = 'The rain came down over the harbour in long silver threads, and somewhere out in the fog, a ship\'s bell began to toll. "Captain," she whispered, "they are early."';
 function diag(lines) { $('voiceDiag').innerHTML = lines.filter(Boolean).map(esc).join('<br>'); }
 function testDeviceVoice(report) {   // speaks TEST_LINE with the device voice and reports what the browser says happened
   if (!TTS) { report('Device voice: this browser has no speech synthesis.'); return; }
   const u = utter(TEST_LINE), v = browserVoice(), who = v ? v.name + ' (' + v.lang + ')' : 'the browser\'s default voice';
   let started = false;
-  u.onstart = () => { started = true; report('Device voice: speaking with ' + who + '. If you hear nothing, the volume may be down or the device muted.'); };
+  u.onstart = () => { started = true; report('Device voice: speaking with ' + who + '. ' + (IOS ? SILENT_TIP : 'If you hear nothing, check that the volume is up and the device is not muted.')); };
   u.onend = () => report('Device voice: finished speaking with ' + who + (started ? '.' : ', but it never reported starting (nothing was heard?).'));
   u.onerror = e => report('Device voice: error "' + (e.error || 'unknown') + '" with ' + who + '.');
   report('Device voice: asked ' + who + ' to speak...');
@@ -1667,9 +1670,9 @@ function renderPanels() {
   $('usage').textContent = 'Browser storage used: ' + (new Blob([localStorage.getItem(KEY) || '']).size / 1024).toFixed(1) + ' KB of about 5,000 KB.';
 }
 function refresh() { renderStory(); renderPanels(); }
-function showTab(t) { flushEdits(); document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x.dataset.t === t)); document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.id === t)); if (t !== 'story') renderPanels(); else fitLast(); }
+function showTab(t) { flushEdits(); document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x.dataset.t === t)); document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.id === t)); if (t !== 'story') { renderPanels(); document.querySelector('main').scrollTop = 0; } else fitLast(); }   // other tabs open at the top; the story snaps to the newest message
 document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => showTab(b.dataset.t));
-function showSub(p) { document.querySelectorAll('#subnav button').forEach(x => x.classList.toggle('on', x.dataset.p === p)); document.querySelectorAll('#settings .sp').forEach(x => x.classList.toggle('on', x.dataset.p === p)); }
+function showSub(p) { document.querySelectorAll('#subnav button').forEach(x => x.classList.toggle('on', x.dataset.p === p)); document.querySelectorAll('#settings .sp').forEach(x => x.classList.toggle('on', x.dataset.p === p)); document.querySelector('main').scrollTop = 0; }
 document.querySelectorAll('#subnav button').forEach(b => b.onclick = () => showSub(b.dataset.p));
 $('startSettings').addEventListener('click', () => showSub('conn'));
 $('saveBible').onclick = () => saveBibleNow();
