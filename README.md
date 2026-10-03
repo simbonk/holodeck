@@ -40,6 +40,7 @@ No key yet? Choose **Try the offline demo** to look around with a fake Game Mast
 - **"Model not found" or a 404:** preview models get renamed. Open *Settings > Connection*, press **Test connection & list models**, and pick an available model.
 - **401 or 403:** the key was not accepted. Re-paste it.
 - **429:** rate limit or daily quota. Wait, or switch the voice engine to the free browser voice.
+- **Free-tier keys:** Google's free tier does not include the Pro story model. The app detects this on the first refusal (or when you press **Test connection**) and runs the story on the cheap Flash model instead. Paid keys keep the Pro default.
 - **Browser storage is full:** export a backup, or link a save folder in *Settings > Data*.
 
 ## License
