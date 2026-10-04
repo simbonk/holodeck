@@ -1171,7 +1171,7 @@ function wavFromPcm(pcm, rate) {   // raw 16-bit mono PCM -> WAV, in case the AP
 }
 const ttsCache = new Map();   // voice+model+style+text -> audio URL; replaying a message costs nothing while the page stays open
 async function geminiTTS(text) {
-  const voice = S().ttsVoice || DEFAULT_TTS_VOICE, model = S().ttsModel || GEMINI.ttsModel, style = S().ttsStyle || DEFAULT_TTS_STYLE, ck = [voice, model, style, text].join('\u0001');
+  const voice = (A() && A().ttsVoice) || S().ttsVoice || DEFAULT_TTS_VOICE, model = S().ttsModel || GEMINI.ttsModel, style = S().ttsStyle || DEFAULT_TTS_STYLE, ck = [voice, model, style, text].join('\u0001');
   if (ttsCache.has(ck)) return ttsCache.get(ck);
   const body = {
     model,
@@ -1798,7 +1798,7 @@ async function createAdventure(name, answers, cats, srcName, photo) {
   const txt = answers.filter(x => x.id !== 'photo').map((x, i) => (i + 1) + '. ' + x.q + '\n   ' + x.a).join('\n');
   const g = id => { const v = (answers.find(x => x.id === id) || {}).a || ''; return isNoPref(v) ? '' : v; };
   const M = minutesOf(g('time')); a.minutes = M; a.elapsed = 0; a.mode = /simulat/i.test(g('mode')) ? 'sim' : 'story';
-  a.feeling = g('feeling') || 'Awe and Wonder'; if (isSim(a)) a.goal = g('goal') || 'Explore and enjoy the place';
+  a.feeling = g('feeling') || 'Awe and Wonder'; { const v = romanceVoice(g('romance')); if (v) a.ttsVoice = v; } if (isSim(a)) a.goal = g('goal') || 'Explore and enjoy the place';
   if (photo) a.photo = { thumb: photo.thumb, canvas: photo.canvas, place: photo.place, era: photo.era, caption: photo.caption || '' };
   const sim = isSim(a), est = Math.max(2, Math.round(M * 60 / SEC_PER_TURN));
   let made = null;
@@ -1842,6 +1842,12 @@ async function createAdventure(name, answers, cats, srcName, photo) {
   db.adventures[name] = a; db.current = name; persist(name);
 }
 
+// The romance answer picks the Gemini narrator for that adventure: interested in women -> Sulafat, in men -> Charon (otherwise your Settings voice).
+function romanceVoice(t) {
+  const m = /interested in\s+(.*)$/i.exec(String(t || '')), w = (m ? m[1] : String(t || '')).toLowerCase();
+  const fem = /\b(women|woman|females?|girls?|ladies|lady|her|she|wife|girlfriend)\b/.test(w), masc = /\b(men|man|males?|guys?|boys?|him|he|husband|boyfriend)\b/.test(w);
+  return fem && !masc ? 'Sulafat' : masc && !fem ? 'Charon' : '';
+}
 function addPlayerLore(a, name, desc) {   // the main character's own lore entry; always listed first
   const k = String(name).toLowerCase(), old = a.lore[k];
   a.lore[k] = Object.assign(old || { aliases: [] }, { name, type: 'person', desc: [old && old.desc, desc].filter(Boolean).join(' ').trim(), isPlayer: true, lastSeen: 0 });
