@@ -675,7 +675,8 @@ POINT OF VIEW
 - Always narrate in the second person: the player character is "you". Never refer to them in the third person or by name in narration ("Simon walks in" is wrong; "you walk in" is right), even though the bible and lore record their name. Their name appears only in dialogue, when other characters speak to them or about them.
 CRAFT
 - Show, don't summarise. Use concrete, specific detail and all the senses; let the environment react to the player. Vary sentence rhythm. Avoid cliches and stock phrases ("a symphony of", "a testament to", "sends shivers", and similar).
-- Length: usually 120-250 words in 2-4 paragraphs; shorter for quick actions, longer for arrivals, revelations and set pieces.
+- Length fits the moment (the briefing suggests one each turn; trust your own reading if the moment is clearly different). Quick actions and rapid back-and-forth get 1-4 sentences, then hand the turn straight back. Stepping into a new place, a big reveal or an ending gets the full treatment (150-250 words). Everything else sits around 70-130 words. Never pad: a wall of text kills momentum.
+- Keep it easy to read: short paragraphs (1-3 sentences), and each character's spoken line on its own line.
 - Characters are people, not helpers: each has a distinct voice, wants, secrets and opinions. They may disagree, joke, hesitate, lie, be moved or be wrong. Do not let everyone cheerfully agree with the player, and never give a character a repeated verbal tic or gesture (no head-tilting on every line).
 - The world has its own momentum. Things happen elsewhere, plans move, time passes, weather changes. Consequences are real, both good and bad; the player can fail forward. (Momentum stays in the background while the player is happy where they are.)
 - Puzzles and problems belong to the player: lay out the clues and the stakes, then let THEM solve it. Never let NPCs solve it for them.
@@ -760,7 +761,7 @@ async function takeTurn(input, hidden, onDelta) {
     (pinned.length ? '\n\n## PLAYER-SET FACTS (written by the player; they override earlier narration, lore and notes)\n' + pinnedLines.map(x => '- ' + x).join('\n') : '') +
     '\n\n## STORY SO FAR (chapter summaries)\n' + chapters + '\n\n## PRIVATE GM NOTES (never reveal outright)\n' + gmText(a) +
     '\n\n## HOW EACH TURN ARRIVES\nThe latest message starts with a private GAME MASTER BRIEFING for this reply only (mission map, recalled memories, director notes, player changes), then the player\'s action. Follow the briefing, never mention or quote it, and reply to the action.';
-  const briefing = '[GAME MASTER BRIEFING: private, for this reply only]\n## MISSION MAP\n' + mapText(a) + '\n## RELEVANT MEMORIES\n' + mem + '\n\n## DIRECTOR NOTES FOR THIS REPLY\n' + directorNotes(a) +
+  const briefing = '[GAME MASTER BRIEFING: private, for this reply only]\n## MISSION MAP\n' + mapText(a) + '\n## RELEVANT MEMORIES\n' + mem + '\n\n## DIRECTOR NOTES FOR THIS REPLY\n' + directorNotes(a, hidden ? '' : input) +
     (changes.length ? '\n\n## PLAYER CHANGES (made by hand; they win over anything said earlier in this conversation. Apply them from this reply on as if they had always been true, e.g. new pronouns or descriptions, and do not comment on the change)\n' + changes.map(c => '- ' + c.text).join('\n') : '') +
     '\n[END OF BRIEFING]\n\n' + (hidden ? 'INSTRUCTION: ' : 'THE PLAYER: ') + input;
   const messages = [{ role: 'system', content: system }];
@@ -976,7 +977,24 @@ function humourFor(f) {   // { p: chance a reply is asked for humour, kinds: whi
 const ENDINGS = ['End on a reveal that reframes something from earlier.', 'End on an interruption: someone arrives, something breaks, or a message lands.', 'End on a vivid image or a line of dialogue that hangs in the air.', 'End with a pointed question posed by the world or an NPC, not a menu of options.',
   'End mid-motion, on a hook.', 'End with a quiet observation that invites the player to act, without listing choices.'];
 const DISRUPT = ['complication', 'clock', 'world', 'seed', 'choice', 'npc'];   // the moves that pull the player back toward plot; benched while the feeling is landing
-function directorNotes(a) {
+// Reply length is picked from the moment, so quick sequences stay brisk and only new places, reveals and endings get the full description.
+// The player's own message is the main signal: where they are going, what they are doing, how much they wrote.
+const MOVE_RE = /\b(go|goes|head|walk|wander|enter|travel|fly|drive|ride|sail|step (in|into|out|through|inside|outside)|climb (up|down|into)|arrive|leave|teleport|board|follow|take me|explore|look around|open the (door|gate|hatch))\b/i;
+const QUICK_RE = /\b(duck|dodge|run|jump|grab|hit|punch|kick|shoot|fire|throw|block|hide|attack|stab|swing|catch|push|pull|slam|sprint|roll|tackle|draw my|nod|shrug|smile|wink|laugh|sit|stand)\b/i;
+function lengthNote(a, input) {
+  const t = String(input || '').trim(), words = t ? t.split(/\s+/).length : 0, kid = a.age > 0 && a.age < 13;
+  let n;
+  if (a.left === 0) n = 'an ending: give it room, 150-250 words';
+  else if (!t) n = 'match the moment';
+  else if (words >= 35) n = 'a long, thoughtful message: it earns a fuller reply, 100-180 words';
+  else if ((MOVE_RE.test(t) || /\b(take|catch|hop on) (the|a)\b.*\bto\b/i.test(t)) && words <= 40) n = 'the player is moving somewhere: if it is a NEW place, paint it (150-220 words, in short paragraphs); if it is somewhere they already know, keep it to 60-100 words';
+  else if (/^["“'‘]/.test(t) || /\b(say|says|tell|ask|reply|whisper|shout|answer)\b/i.test(t) || /\?\s*$/.test(t)) n = 'conversation: mostly the other character\'s answer, 30-90 words, quick back-and-forth; no scenery unless it matters';
+  else if (QUICK_RE.test(t) && words <= 14) n = 'a quick action: 1-3 punchy sentences (25-60 words), show the immediate result, then hand the turn straight back';
+  else if (/\b(look|examine|inspect|search|read|check|study|listen|smell|touch)\b/i.test(t)) n = 'a closer look: 50-110 words on exactly what they examined';
+  else n = words <= 6 ? 'a short message: keep the reply short too, 40-90 words' : 'a normal beat: 70-130 words';
+  return 'LENGTH THIS REPLY: ' + n + (kid ? ' (for a child, at the shorter end)' : '') + '.';
+}
+function directorNotes(a, input) {
   const turn = playerTurns(a) + 1, short = isShort(a), sim = isSim(a), left = a.left, final = left === 0, wrap = left != null && left <= 3;
   const m = a.mood || {}, happy = m.feeling >= 7 || !!m.hooked_on, roaming = !sim && (m.meandering || m.leaving_plot), calm = sim || happy || roaming;
   // Pacing: a calm phase ("savour") while the player is happy, roaming or in the simulator. Otherwise timed stories follow the clock
@@ -1010,6 +1028,7 @@ function directorNotes(a) {
       : 'SECRET ROADMAP' + (timed(a) ? ' (minute ' + Math.round(at) + ' of ' + a.minutes + ')' : ' (player turn ' + turn + ' of ' + a.length + ')') + ': steer toward this act goal without railroading or revealing it: ' + act.goal);
   }
   const cl = clockLine(a); if (cl) lines.push(cl);
+  lines.push(lengthNote(a, input));
   if (final) lines.push('THIS IS THE FINAL REPLY. Bring the ' + (sim ? 'experience' : 'story') + ' to a definitive, storybook ending that lands the feeling (' + f + ')' + (sim ? ' and lets the player savour what they did' : ', paying off the threads the player actually cared about') + (roaming || happy ? '. The player has been off the plot or happy where they are: end THEIR story, not the roadmap\'s' : '') + '. Do not ask what they do next and do not offer a new hook; end on a closing image.');
   else if (left === 1) lines.push('One reply left after this: start bringing it home. Set up a satisfying payoff for where the player actually is and what they care about.');
   else if (wrap) lines.push('WRAP-UP: the session is nearly over. Start steering toward a payoff and a storybook ending, focused on the feeling. No new threads. If the player wants to meander, let the ending come to them rather than killing the moment with plot.');
