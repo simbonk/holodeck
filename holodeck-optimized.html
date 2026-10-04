@@ -485,7 +485,9 @@ async function chat(tag, messages) {
   const bigModel = tag === 'gm' || tag === 'final' || tag === 'photo' || (tag === 'plan' && S().notesModel === 'story');   // GM notes run on the cheap model unless Settings says otherwise
   const eff = tag === 'gm' ? '' : tag === 'plan' || tag === 'final' || tag === 'photo' ? 'low' : 'minimal';   // background calls do not need deep thinking
   const variants = eff ? [{ effort: eff }, {}] : [{}];
-  const { r, model } = await quotaRetry(bigModel ? storyModel() : cheapModel(), bigModel, m => tryVariants(m, variants, messages));
+  let { r, model } = await quotaRetry(bigModel ? storyModel() : cheapModel(), bigModel, m => tryVariants(m, variants, messages));
+  // The cheap model is out of quota or unavailable: background calls (suggestions, memory) borrow the story model rather than fail silently.
+  if (!r.ok && !bigModel && [404, 429, 503].includes(r.status) && storyModel() !== model) { console.warn('cheap model "' + model + '" answered HTTP ' + r.status + '; using the story model for "' + tag + '"'); model = storyModel(); r = await tryVariants(model, variants, messages); }
   if (!r.ok) throw await llmError(r, model);
   const j = await r.json(); recordUsage(tag, j.usage, bigModel && !S().freeTier);
   return j.choices[0].message.content;
@@ -1643,7 +1645,7 @@ async function moreOptions(id) {
       { role: 'user', content: 'EARLIER ANSWERS:\n' + prior + '\n\nQUESTION: ' + q.q + ' (' + q.h + ')\nEXISTING OPTIONS: ' + chipsOf(q).concat(cur.extra[id] || []).join('; ') }]);
     const opts = (parseJson(raw).options || []).slice(0, 8); cur.extra[id] = (cur.extra[id] || []).concat(opts);
     if ((curQs()[cur.i] || {}).id === id) { addExtraChips(opts); $('curMsg').textContent = ''; armMore(); }
-  } catch (e) { console.warn('more options failed', e); if ((curQs()[cur.i] || {}).id === id) $('curMsg').textContent = ''; }
+  } catch (e) { console.warn('more options failed', e); if ((curQs()[cur.i] || {}).id === id) $('curMsg').textContent = 'Could not think of more options: ' + String(e.message || e).slice(0, 220); }
 }
 function curRender() {
   const qs = curQs(); cur.i = Math.min(cur.i, qs.length - 1); const q = qs[cur.i], n = qs.length;
