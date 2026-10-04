@@ -644,6 +644,8 @@ THE FEELING COMES FIRST
 - Follow the player's lead. If they walk away from the plot (leave, escape, change the subject, spend their time with one character), the plot lets them go: threats do not chase them across the galaxy, the nightmare does not follow the shuttle, other characters do not barge in. Plot is an offering, never a pursuer. Offer it again only if the player reaches for it.
 - Keep a good thing going: when the player is clearly enjoying a character, a place or an activity, deepen it. Do not interrupt it with new complications or extras.
 - Play by the clock: the session lasts a set number of real minutes, and the briefing says how much time is left. Near the end, steer toward a storybook ending that lands the feeling.
+POINT OF VIEW
+- Always narrate in the second person: the player character is "you". Never refer to them in the third person or by name in narration ("Simon walks in" is wrong; "you walk in" is right), even though the bible and lore record their name. Their name appears only in dialogue, when other characters speak to them or about them.
 CRAFT
 - Show, don't summarise. Use concrete, specific detail and all the senses; let the environment react to the player. Vary sentence rhythm. Avoid cliches and stock phrases ("a symphony of", "a testament to", "sends shivers", and similar).
 - Length: usually 120-250 words in 2-4 paragraphs; shorter for quick actions, longer for arrivals, revelations and set pieces.
@@ -725,7 +727,8 @@ async function takeTurn(input, hidden, onDelta) {
   // Prompt order is deliberate, for Google's prompt cache: everything that rarely changes (rules, bible, chapters, GM notes) is the system
   // message, then the conversation; only the last message changes every turn. It carries this turn's private briefing (map, recalled
   // memories, director notes, hand changes) followed by the player's action, and is not stored, so earlier turns stay byte-for-byte identical.
-  const system = GM_RULES + (isShort(a) ? '\n' + shortRules(a) : '') + '\n\n' + feelingRules(a) + '\n\n' + modeRules(a) + '\n\n## STORY BIBLE\n' + a.bible +
+  const me = Object.values(a.lore).find(e => e.isPlayer);
+  const system = GM_RULES + (isShort(a) ? '\n' + shortRules(a) : '') + (me && me.name !== 'You' ? '\n\nTHE PLAYER CHARACTER is ' + me.name + ', and that is "you": narrate everything they do and feel as "you"; the name ' + me.name + ' appears only in other characters\' dialogue.' : '') + '\n\n' + feelingRules(a) + '\n\n' + modeRules(a) + '\n\n## STORY BIBLE\n' + a.bible +
     (a.photo && a.photo.canvas ? "\n\n## THE WORLD AS PAINTED FROM THE PLAYER'S PHOTO (keep it faithful)\n" + a.photo.canvas : '') +
     (pinned.length ? '\n\n## PLAYER-SET FACTS (written by the player; they override earlier narration, lore and notes)\n' + pinnedLines.map(x => '- ' + x).join('\n') : '') +
     '\n\n## STORY SO FAR (chapter summaries)\n' + chapters + '\n\n## PRIVATE GM NOTES (never reveal outright)\n' + gmText(a) +
@@ -803,7 +806,7 @@ async function refreshBible(a) {
   const recent = a.transcript.slice(-BIBLE_EVERY * 2).map(t => t.role + ': ' + t.text).join('\n');
   const wi = wishAt(a.bible), wishes = wi >= 0 ? a.bible.slice(wi).trim() : wishesSection(a), before = a.bible;   // keep the wishes block exactly as it is now (it may have been hand-edited)
   const nb = await chat('bible', [
-    { role: 'system', content: 'Rewrite the story bible for a text adventure as a tight one-pager (max 450 words, markdown): premise, tone, player character, cast, setting, current situation, goals, and a "story so far" summary. Keep everything still relevant; compress old material. Do NOT include a "Player\'s Wishes" section; it is added separately. Keep any details the player wrote by hand, even if unusual. Output only the bible.' },
+    { role: 'system', content: 'Rewrite the story bible for a text adventure as a tight one-pager (max 450 words, markdown), addressing the player character as "you" (name them once, never narrate them in the third person): premise, tone, player character, cast, setting, current situation, goals, and a "story so far" summary. Keep everything still relevant; compress old material. Do NOT include a "Player\'s Wishes" section; it is added separately. Keep any details the player wrote by hand, even if unusual. Output only the bible.' },
     { role: 'user', content: 'CURRENT BIBLE:\n' + stripWishes(a.bible) + '\n\n' + playerFactsText(a) + 'MISSION MAP:\n' + mapText(a) + '\nRECENT TRANSCRIPT:\n' + recent }]);
   if (nb && nb.trim() && a.bible === before) { a.bible = stripWishes(nb.trim()) + '\n\n' + wishes; if (a.bibleSeen === before) a.bibleSeen = a.bible; }   // skip if you edited the bible while this refresh was running
 }
@@ -1711,7 +1714,7 @@ function startSequel(name) {   // a new questionnaire for the same cast and worl
   $('start').classList.remove('on'); $('finale').classList.remove('on'); $('curator').classList.add('on'); $('curNext').disabled = false; curRender();
 }
 const CREATE_RULES = `You are a story architect for an immersive holodeck experience. From the player's questionnaire answers, output ONLY one JSON object:
-{"bible":"markdown one-pager (max 400 words): premise, tone, player character (with strengths/flaws), setting, cast, central goal, main threat, style of play. Do NOT include a Player's Wishes section.",
+{"bible":"markdown one-pager (max 400 words), written to the player as 'you' (give the player character's name once, then call them 'you'): premise, tone, player character (with strengths/flaws), setting, cast, central goal, main threat, style of play. Do NOT include a Player's Wishes section.",
  "location":"name of the opening place","places":["3-5 place names"],"links":[["Place A","Place B"]],
  "beats":[{"beat":"mission step","status":"active|upcoming"}],
  "player":{"name":"the player character's name (from the answers, else a fitting one)","desc":"2-4 sentences: who the player character is, background, strengths and flaws, and (if there is a Romance answer) who they are and who they are drawn to"},
