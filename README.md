@@ -1,16 +1,21 @@
 # Holodeck
 
-A single-file, AI-run text adventure powered by Google Gemini. Answer 11 quick questions and a Game Master builds a story just for you, remembers everything, steers toward a real ending, and grades the result with a report card. Play by typing or hands-free by voice.
+A single-file, AI-run text adventure powered by Google Gemini. Say how much time you have and the feeling you want, pick a curated story or a plot-free experience (or just upload a photo), and a Game Master builds a world just for you, keeps an eye on the clock, lands a real ending, and grades the result with a report card. Play by typing or hands-free by voice.
 
 <!-- Add a screenshot here: ![Holodeck](screenshot.png) -->
 
 ## Features
-- **Curated start:** 11 questions (length, genre, vibe, character, hook) shape your world. Pick a romantic vibe and a final question asks who you are and who you're interested in.
-- **Short stories that read like short stories:** 5 and 10 turn adventures are told clean and simple (one goal, a small cast, a payoff ending), and their suggested settings stay on Earth in familiar times.
+- **Play by the clock, not by turns:** choose 10 minutes to 2 hours. The app learns your pace, estimates how many replies are left, starts wrapping up about three replies from the end, and lands a storybook ending in time. Having fun? **+10 min** in the header stretches the session.
+- **The feeling comes first:** pick the feeling you want (Nostalgia, Unapologetic Relaxation, Exhilaration and Adventure, Deep Connection Love, Pure Indulgence, Awe and Wonder, or your own words; more suggestions appear while you think). It goes into the bible and is the Game Master's main goal.
+- **It notices when you're happy:** every turn the memory pass also reads your mood. When the feeling is landing or you are clearly enjoying a character or place, the plot steps aside: no interruptions, no new complications, and threats don't follow you 200 light years away. Walk away from the plot and it lets you go.
+- **Two ways to play:** a *curated story* (a hidden roadmap timed to the session, which bends or waits for you) or an *experience simulator* (no plot points at all: a richly painted world, your own goal, and the feeling).
+- **Paint the world from a photo:** upload a picture and the holodeck works out the place, the time and the people, writes a detailed description of the world, adds lore, and fills in the rest of the questions.
+- **Living lore:** when something changes in play (a relationship, a location, a secret revealed), the lore entry is updated, with earlier versions kept in the Lore tab. It rides on the existing memory call, so it costs no extra requests.
+- **Short sessions that read like short stories:** 15 minutes or less is told clean and simple (one goal, a small cast, a payoff ending), and its suggested settings stay on Earth in familiar times.
 - **Same cast, new story:** after a story you love, start a sequel, a "years later", a fresh start or a prequel with the same characters and world.
 - **Long-term memory:** story bible, lorebook, chapter summaries and hybrid keyword + semantic recall keep long stories consistent.
 - **A plan behind the curtain:** secret roadmap, hidden GM secrets, and a "director" that varies pacing and flags repeated phrases.
-- **Report card:** story grade, play grade, and a review of the secret roadmap at the end.
+- **Report card:** a grade for how well the feeling was achieved, a story grade, a play grade, and a review of the secret roadmap (or of your own goal in the simulator).
 - **Hands-free voice:** dictation (say *make it so* to send; the phrase glows while the mic listens), Gemini narrator voice, soft background sound, and automatic cleanup of misheard words.
 - **You stay in control:** edit the bible and lore mid-story (your edits win over earlier narration), undo a turn (memory included), watch the cost meter, save adventures as plain JSON files.
 
