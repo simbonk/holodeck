@@ -71,6 +71,8 @@
   .grp{border:1px solid var(--line);border-radius:10px;padding:2px 12px 12px;margin:0 0 14px}
   .grp>b{display:block;margin-top:10px;color:var(--accent);font-size:13px;letter-spacing:.06em}
   .chip.ai{border-style:dashed}
+  button.busy{animation:rec 1.2s infinite;cursor:progress}
+  #curMsg{font-size:15px;color:var(--fg)}
   .grade{font-size:56px;font-weight:700;color:var(--accent);line-height:1}
   #finale ul{margin:4px 0 10px;padding-left:20px}
   /* hands-free send phrase: every letter glows and bobs in a wave so nobody misses it */
@@ -113,6 +115,7 @@
         <button data-p="conn" class="on">Connection</button>
         <button data-p="story">Story &amp; cost</button>
         <button data-p="voice">Voice &amp; sound</button>
+        <button data-p="me">Personal details</button>
         <button data-p="data">Data</button>
       </div>
 
@@ -206,6 +209,21 @@
         </div>
         <p><button id="testVoice">Test voice</button> <button id="testDevice">Test device voice only</button></p>
         <p class="tag" id="voiceDiag">Test voice tries the Gemini voice and, if it is out of quota, the device voice (Siri-style system voice). Each step is reported here.</p>
+      </section>
+
+      <section class="sp" data-p="me">
+        <div class="grp">
+          <b>ABOUT YOU</b>
+          <p class="tag">Filled in for you when you set up a new experience, so you only type them once. You can still change them for any one story. Stored only in this browser.</p>
+          <label>Your name</label>
+          <div class="row"><input id="setMeName" placeholder="e.g. Simon" autocomplete="off"></div>
+          <label>Gender</label>
+          <div class="row"><select id="setMeGender" style="width:100%"><option value="">(not set)</option><option>Male</option><option>Female</option><option>Non-binary</option></select></div>
+          <label>Interested in (romance)</label>
+          <div class="row"><select id="setMeInterest" style="width:100%"><option value="">(not set)</option><option>Women</option><option>Men</option><option>Everyone</option></select></div>
+          <label>Birth year (lets the story pitch nostalgia and era details to your age)</label>
+          <div class="row"><input id="setMeBorn" type="number" min="1900" max="2030" placeholder="e.g. 1980"></div>
+        </div>
       </section>
 
       <section class="sp" data-p="data">
@@ -1489,6 +1507,13 @@ const QUESTIONS = [
 ];
 const QBY = Object.fromEntries(QUESTIONS.map(q => [q.id, q]));
 // Follow-up asked last, only when the vibe (or genre) includes romance and the boundaries do not rule it out. Free text, no chips.
+const NAME_Q = { id: 'name', q: 'Last thing: what is your name in this story?', h: 'Kept in Settings > Personal details, so next time it is filled in for you. Change it here to play someone else.', c: [], ph: 'Your name' };
+function mePrefill() {   // answers filled in from Settings > Personal details
+  const me = S().me || {}, out = {}, who = { Male: 'a man', Female: 'a woman', 'Non-binary': 'a non-binary person' }[me.gender], what = { Women: 'women', Men: 'men', Everyone: 'anyone who catches my eye' }[me.interest];
+  if (me.name) out.name = me.name;
+  if (who || what) out.romance = 'I am ' + (who || 'someone') + ' who is interested in ' + (what || '...');
+  return out;
+}
 const ROMANCE_Q = { id: 'romance', q: 'Romance: you are a ___ who is interested in ___.', h: 'Fill in the blanks in your own words, e.g. "a retired spy who is interested in the new neighbour" or "a nervous bard who is interested in women".', c: [], ph: 'I am a ... who is interested in ...' };
 // "Same cast, new story": a shorter questionnaire. The cast, world and the old answers below carry over (and are pre-filled).
 const LINK_Q = { id: 'link', q: 'How does the new story connect to the old one?', h: 'Same cast and world either way; this sets what they remember.', c: ['Sequel: it picks up after the last story', 'Years later', 'Fresh start: same cast, new story', 'Prequel: before it all began'] };
@@ -1508,7 +1533,7 @@ function curQs() {   // the list depends on the play mode you pick (and a new st
   const sim = simPick(), head = [QBY.time, QBY.feeling, QBY.mode];
   const qs = cur.src ? head.concat([LINK_Q, sim ? QBY.goal : QBY.hook, WHO2_Q], sim ? [] : [QBY.vibe, QBY.play], [QBY.avoid])
     : head.concat([QBY.photo], (sim ? SIM_IDS : STORY_IDS).map(id => QBY[id]));
-  return qs.concat(wantsRomance() ? [ROMANCE_Q] : []);
+  return qs.concat(wantsRomance() ? [ROMANCE_Q] : [], [NAME_Q]);
 }
 // Adventures made before answers had ids stored them by position.
 const OLD_IDS = ['world', 'vibe', 'who', 'traits', 'where', 'hook', 'allies', 'threat', 'play', 'avoid', 'length', 'romance'];
@@ -1545,7 +1570,7 @@ const MORE_ROUNDS = { feeling: 3 };   // feelings keep populating: up to 3 round
 const moreDue = id => (cur.rounds[id] || 0) < (MORE_ROUNDS[id] || 1);
 function armMore() {   // (re)start the wait; every interaction restarts it, so it only fires when the player seems stuck
   clearTimeout(moreTimer); const q = curQs()[cur.i];
-  if (!q || !moreDue(q.id) || ['time', 'mode', 'photo', 'length', 'romance', 'link'].includes(q.id) || (S().fake ? false : !S().key)) return;
+  if (!q || !moreDue(q.id) || ['time', 'mode', 'photo', 'length', 'romance', 'link', 'name'].includes(q.id) || (S().fake ? false : !S().key)) return;
   moreTimer = setTimeout(() => moreOptions(q.id), q.id === 'feeling' ? 3500 : MORE_AFTER_MS);
 }
 async function moreOptions(id) {
@@ -1577,7 +1602,7 @@ function curRender() {
   $('curChips').innerHTML = chipsOf(q).map(c => '<button class="chip" data-c="' + esc(c) + '">' + esc(c) + '</button>').join('');
   if (cur.extra[q.id]) addExtraChips(cur.extra[q.id]); else wireChips();
   $('curBack').disabled = cur.i === 0;
-  $('curNext').textContent = cur.i === n - 1 ? 'Create my experience' : 'Next';
+  curNextLabel();
   $('curMsg').textContent = ''; armMore();
 }
 function curChips() { const parts = $('curA').value.split(/,\s*/); $('curChips').querySelectorAll('.chip').forEach(b => b.classList.toggle('sel', parts.includes(b.dataset.c))); }
@@ -1590,12 +1615,20 @@ $('curNext').onclick = async () => {
   if (q.photo && cur.photo && !cur.photo.canvas && !(await readPhoto())) return;   // the photo is studied once, when you leave this step
   if (!cur.answers[q.id]) cur.answers[q.id] = q.photo && cur.photo ? '(photo uploaded)' : NOPREF; curAdvance();
 };
-$('curFinish').onclick = () => {   // the photo answered the rest; the romance question (when it applies) is still asked
+$('curFinish').onclick = () => {   // the photo answered the rest; the romance question (when it applies) and your name are still asked
   curStore(); const qs = curQs(), r = qs.findIndex(q => q.id === 'romance');
-  if (r > cur.i && !cur.answers.romance) { cur.i = r; curRender(); return; }
-  cur.i = qs.length - 1; curAdvance();
+  cur.i = r > cur.i ? r : qs.length - 1; curRender();
 };   // the photo answered the rest
 $('curCancel').onclick = () => { $('curator').classList.remove('on'); renderStart(); $('start').classList.add('on'); };
+
+function busyBtn(b, text) {   // a pulsing, disabled button that says what is happening; call without text to restore it
+  if (text) { b.dataset.label = b.dataset.label || b.textContent; b.textContent = text; b.disabled = true; b.classList.add('busy'); }
+  else { b.disabled = false; b.classList.remove('busy'); if (b.dataset.label) { b.textContent = b.dataset.label; delete b.dataset.label; } }
+}
+function curNextLabel() {   // the main button says what it will do
+  const qs = curQs(), q = qs[cur.i]; if (!q) return;
+  $('curNext').textContent = q.photo && cur.photo && !cur.photo.canvas ? 'Study my photo \u2192' : cur.i === qs.length - 1 ? 'Create my experience' : 'Next';
+}
 
 // ---------------- Photo: paint the world from a picture ----------------
 // The photo is shrunk in the browser (it never needs to be big) and sent once to the story model, which describes the place, the time and the
@@ -1627,12 +1660,12 @@ $('photoFile').onchange = async e => {
     const url = URL.createObjectURL(file), img = new Image();
     await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('This browser could not open that image. Try a JPEG or PNG.')); img.src = url; });
     cur.photo = { name: file.name, full: shrinkImage(img, 1280, 0.85), thumb: shrinkImage(img, 360, 0.7) }; URL.revokeObjectURL(url);
-    $('curMsg').textContent = 'Press Next and the holodeck will study your photo.'; showPhoto();
+    $('curMsg').textContent = 'Press "Study my photo" and the holodeck will read the place, the time and the people.'; showPhoto(); curNextLabel();
   } catch (err) { $('curMsg').textContent = err.message; }
 };
 async function readPhoto() {   // returns false if it failed (you stay on the photo step)
   const p = cur.photo, caption = $('curA').value.trim();
-  $('curNext').disabled = true; $('curMsg').textContent = 'Studying your photo: the place, the time and the people...';
+  busyBtn($('curNext'), 'Studying your photo...'); $('curMsg').textContent = 'Studying your photo: the place, the time and the people. This takes a few seconds.';
   try {
     let o;
     if (S().fake) o = { place: 'A sunlit harbour café', era: 'Late summer, early evening', mood: 'Warm, lazy, golden', people: [{ label: 'The friend with the sunglasses', desc: 'Laughing at something just out of frame.' }],
@@ -1649,30 +1682,31 @@ async function readPhoto() {   // returns false if it failed (you stay on the ph
     cur.answers.photo = 'Photo: ' + [p.place, p.era].filter(Boolean).join(', ') + (caption ? '. Caption: ' + caption : '');
     $('curMsg').textContent = ''; return true;
   } catch (err) { $('curMsg').textContent = 'Could not study the photo: ' + err.message; return false; }
-  finally { $('curNext').disabled = false; }
+  finally { busyBtn($('curNext')); }
 }
 async function curAdvance() {
   const qs = curQs();
   if (cur.i < qs.length - 1) { cur.i++; curRender(); return; }
   const answers = qs.map(q => ({ id: q.id, q: q.q, a: cur.answers[q.id] || '(no preference)' }));
+  const nm = cur.answers.name; if (nm && !isNoPref(nm) && !(S().me || {}).name) { db.settings.me = Object.assign({}, S().me, { name: nm }); $('setMeName').value = nm; persist(); }   // remember your name for next time
   let suggested;
   if (cur.src) { const base = cur.src.replace(/ \d+$/, ''); let k = 2; while (db.adventures[base + ' ' + k]) k++; suggested = base + ' ' + k; }
   else { const w = cur.answers.world || ''; suggested = (isNoPref(w) || !w ? 'Adventure' : w.split(',')[0]).replace(/[^\p{L}\p{N} ]/gu, '').trim().slice(0, 30) + ' ' + new Date().toISOString().slice(5, 10); }
   let name = prompt('Name this experience:', suggested); if (!name) return; name = name.trim();
   if (db.adventures[name] && !confirm('"' + name + '" exists. Replace it?')) return;
-  $('curNext').disabled = true; $('curMsg').textContent = 'The curator is building your world...';
+  busyBtn($('curNext'), 'Building your world...'); $('curMsg').textContent = 'The curator is building your world. This takes a few seconds.';
   // The chosen "how do you like to play" options (including AI-suggested ones) become the gameplay categories the Director rotates through at random.
   const notCats = QBY.play.c.slice(4).map(s => s.toLowerCase());
   const cats = (isNoPref(cur.answers.play) ? '' : cur.answers.play || '').split(/,\s*/).map(s => s.trim()).filter(s => s && !notCats.includes(s.toLowerCase())).slice(0, 6);   // "surprise me" contains a comma, so drop it whole
   try { await createAdventure(name, answers, cats, cur.src, cur.photo && cur.photo.canvas ? cur.photo : null); }
-  catch (e) { $('curMsg').textContent = 'Error: ' + e.message; $('curNext').disabled = false; return; }
-  $('curNext').disabled = false;
+  catch (e) { $('curMsg').textContent = 'Error: ' + e.message; busyBtn($('curNext')); curNextLabel(); return; }
+  busyBtn($('curNext')); curNextLabel();
   $('curator').classList.remove('on'); enterAdventure(name, true);
 }
 function startSequel(name) {   // a new questionnaire for the same cast and world, pre-filled from the original answers
   const src = db.adventures[name]; if (!src) return;
   const pre = {}; ['vibe', 'play', 'avoid', 'time', 'feeling', 'mode', 'goal', 'romance'].forEach(id => { const v = curatorAnswer(src, id); if (v) pre[id] = v; });
-  pre.who = WHO2_Q.c[0];
+  pre.who = WHO2_Q.c[0]; const mp = mePrefill(); if (mp.name && !pre.name) pre.name = mp.name; if (mp.romance && !pre.romance) pre.romance = mp.romance;
   cur = { i: 0, answers: pre, extra: {}, rounds: {}, src: name, prefRomance: !!pre.romance };
   $('start').classList.remove('on'); $('finale').classList.remove('on'); $('curator').classList.add('on'); $('curNext').disabled = false; curRender();
 }
@@ -1807,7 +1841,7 @@ async function createAdventure(name, answers, cats, srcName, photo) {
       const raw = await chat('gm', [{ role: 'system', content: CREATE_RULES + (M <= 15 ? '\n' + SHORT_CREATE : '') + (sim ? '\n' + SIM_CREATE : '') + (photo ? '\n' + PHOTO_CREATE : '') + (src ? '\n' + SEQUEL_RULES : '') + '\n' + namingBrief(name) },
         { role: 'user', content: (src ? sourceWorld(src, srcName) + '\n\nNEW QUESTIONNAIRE:\n' : '') + txt + (photo ? '\n\nPHOTO CANVAS (place: ' + photo.place + '; time: ' + photo.era + (photo.caption ? '; caption: ' + photo.caption : '') + '):\n' + photo.canvas +
           '\nPEOPLE IN THE PHOTO:\n' + (photo.people || []).map(p => '- ' + p.label + ': ' + p.desc).join('\n') : '') +
-          '\n\nFEELING TO ACHIEVE: ' + a.feeling + '\nPLAY MODE: ' + (sim ? 'experience simulator (no plot)' : 'curated story') + (sim ? "\nPLAYER'S GOAL: " + a.goal : '') + '\nM (session length in minutes) = ' + M + ' (roughly ' + est + ' player replies)' }]);
+          playerBrief(g('name')) + '\n\nFEELING TO ACHIEVE: ' + a.feeling + '\nPLAY MODE: ' + (sim ? 'experience simulator (no plot)' : 'curated story') + (sim ? "\nPLAYER'S GOAL: " + a.goal : '') + '\nM (session length in minutes) = ' + M + ' (roughly ' + est + ' player replies)' }]);
       made = parseJson(raw);
     } catch (e) { console.warn('curator generation failed, using answers directly', e); }
   }
@@ -1827,7 +1861,7 @@ async function createAdventure(name, answers, cats, srcName, photo) {
       a.lore[k] = { name: e.name, type: e.type || (old && old.type) || 'other', desc: e.desc || (old && old.desc) || '', aliases: [...new Set([...((old && old.aliases) || []), ...(e.aliases || [])])], lastSeen: 0 };
       if (a.lore[k].type === 'place') addPlace(a, e.name);
     });
-    if (made.player && made.player.name) addPlayerLore(a, made.player.name, made.player.desc);
+    if (made.player && (made.player.name || g('name'))) addPlayerLore(a, g('name') || made.player.name, made.player.desc);
   } else if (src) {   // offline or the architect failed: reuse the old bible and note the new story's premise
     a.bible = '# Story Bible\n\n' + stripWishes(src.bible).replace(/^#[^\n]*\n+/, '') + '\n\n**New story:** ' + g('link') + '. ' + g('hook') + '.';
     if (src.gm) a.gm = structuredClone(src.gm);
@@ -1836,7 +1870,7 @@ async function createAdventure(name, answers, cats, srcName, photo) {
     a.bible = '# Story Bible' + L('Premise', (g('world') || 'Open') + (g('vibe') ? ' · ' + g('vibe') : '')) + L('Player character', g('who') + (g('traits') ? '. ' + g('traits') : '')) + L('Setting', g('where') || (photo ? photo.place + ', ' + photo.era : '')) +
       (sim ? '' : L('Central hook', g('hook')) + L('Main threat', g('threat')) + L('Style of play', g('play'))) + L('Company', g('allies')) + (g('romance') ? L('Romance', g('romance')) : '');
   }
-  if (!Object.values(a.lore).some(e => e.isPlayer)) addPlayerLore(a, 'You', [g('who'), g('traits'), g('romance')].filter(Boolean).join('. ') || 'The player character.');
+  if (!Object.values(a.lore).some(e => e.isPlayer)) addPlayerLore(a, g('name') || 'You', [g('who'), g('traits'), g('romance')].filter(Boolean).join('. ') || 'The player character.');
   if (photo) (photo.people || []).forEach(p => { const n = String(p.label || '').trim(); if (n && !/^the\b/i.test(n) && !a.lore[n.toLowerCase()]) a.lore[n.toLowerCase()] = { name: n, type: 'person', desc: p.desc || '', aliases: [], lastSeen: 0 }; });   // people the caption named
   a.bible += '\n\n' + wishesSection(a); a.bibleSeen = a.bible;
   db.adventures[name] = a; db.current = name; persist(name);
@@ -1847,6 +1881,10 @@ function romanceVoice(t) {
   const m = /interested in\s+(.*)$/i.exec(String(t || '')), w = (m ? m[1] : String(t || '')).toLowerCase();
   const fem = /\b(women|woman|females?|girls?|ladies|lady|her|she|wife|girlfriend)\b/.test(w), masc = /\b(men|man|males?|guys?|boys?|him|he|husband|boyfriend)\b/.test(w);
   return fem && !masc ? 'Sulafat' : masc && !fem ? 'Charon' : '';
+}
+function playerBrief(name) {   // the player character's name, plus Settings > Personal details as defaults the answers can override
+  const me = S().me || {}, age = me.born > 1900 ? new Date().getFullYear() - me.born : 0, bits = [me.gender && 'gender: ' + me.gender, me.interest && 'romantically interested in: ' + me.interest, age && 'about ' + age + ' years old (born ' + me.born + '; useful for nostalgia and era details)'].filter(Boolean);
+  return (name ? "\n\nPLAYER CHARACTER'S NAME: " + name + ' (use exactly; never invent a different name for the player)' : '') + (bits.length ? '\nABOUT THE REAL PLAYER (defaults; the answers above win where they differ): ' + bits.join('; ') : '');
 }
 function addPlayerLore(a, name, desc) {   // the main character's own lore entry; always listed first
   const k = String(name).toLowerCase(), old = a.lore[k];
@@ -1872,7 +1910,7 @@ function renderStart() {
     delete db.adventures[n]; if (db.current === n) db.current = ''; persist(n); renderStart(); refresh();
   });
 }
-$('newExpBtn').onclick = () => { cur = { i: 0, answers: {}, extra: {}, rounds: {} }; $('start').classList.remove('on'); $('curator').classList.add('on'); $('curNext').disabled = false; curRender(); };
+$('newExpBtn').onclick = () => { cur = { i: 0, answers: mePrefill(), extra: {}, rounds: {} }; $('start').classList.remove('on'); $('curator').classList.add('on'); $('curNext').disabled = false; curRender(); };
 $('contBtn').onclick = () => { $('contList').style.display = $('contList').style.display === 'none' ? '' : 'none'; };
 $('menuBtn').onclick = () => { renderStart(); $('start').classList.add('on'); };
 $('closeStart').onclick = () => $('start').classList.remove('on');
@@ -2087,6 +2125,7 @@ function loadSettings() {
   $('setNotesModel').value = S().notesModel || 'cheap'; $('setTtsChunk').value = ['one', 'two', '2000', '700'].includes(String(S().ttsChunk)) ? String(S().ttsChunk) : 'one'; $('setPrices').value = S().prices || GEMINI.prices;
   $('setKey').value = S().key || ''; $('setFake').checked = !!S().fake; $('setNoEmbed').checked = !!S().noEmbed; $('setSpeak').checked = !!S().speak; $('setCleanDict').checked = S().cleanDict !== false;
   $('setAmbient').value = S().ambient || ''; $('setRate').value = S().rate || 1; $('setEngine').value = S().ttsEngine || 'gemini'; $('setTtsStyle').value = S().ttsStyle || DEFAULT_TTS_STYLE;
+  const me = S().me || {}; $('setMeName').value = me.name || ''; $('setMeGender').value = me.gender || ''; $('setMeInterest').value = me.interest || ''; $('setMeBorn').value = me.born || '';
   fillModels(); loadTtsVoice();
 }
 $('expBtn').onclick = () => {
@@ -2108,6 +2147,7 @@ function collectSettings() {   // the browser voice is saved by its own handler 
   return { effort: $('setEffort').value, effortV: 3, notesV: 2, ttsV: 1, voiceV: 3, ttsChunkV: 2, welcomed: true, tune_recent: +$('setTuneRecent').value, tune_chapters: +$('setTuneChapters').value, tune_recall: +$('setTuneRecall').value,
     notesModel: $('setNotesModel').value, ttsChunk: $('setTtsChunk').value, prices: $('setPrices').value.trim() || GEMINI.prices, key: $('setKey').value.trim(), model: $('setModel').value.trim(), cheap: $('setCheap').value.trim(), fake: $('setFake').checked,
     embed: $('setEmbed').value.trim(), noEmbed: $('setNoEmbed').checked, speak: $('setSpeak').checked, cleanDict: $('setCleanDict').checked, ambient: $('setAmbient').value,
+    me: { name: $('setMeName').value.trim(), gender: $('setMeGender').value, interest: $('setMeInterest').value, born: +$('setMeBorn').value || 0 },
     rate: +$('setRate').value, ttsEngine: $('setEngine').value, ttsVoice: ttsVoiceValue(), ttsModel: $('setTtsModel').value.trim(), ttsStyle: $('setTtsStyle').value.trim() };
 }
 function keyStatus() {
