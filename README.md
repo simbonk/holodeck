@@ -15,7 +15,7 @@ A single-file, AI-run text adventure powered by Google Gemini. Say how much time
 - **Same cast, new story:** after a story you love, start a sequel, a "years later", a fresh start or a prequel with the same characters and world.
 - **Long-term memory:** story bible, lorebook, chapter summaries and hybrid keyword + semantic recall keep long stories consistent.
 - **A plan behind the curtain:** secret roadmap, hidden GM secrets, and a "director" that varies pacing and flags repeated phrases.
-- **Report card:** a grade for how well the feeling was achieved, a story grade, a play grade, and a review of the secret roadmap (or of your own goal in the simulator).
+- **Report card:** two grades from a discerning high school teacher: *How the Holodeck did* (did it deliver the feeling and your goals?) and *How you did* (your own choices and play).
 - **Hands-free voice:** dictation (say *make it so* to send; the phrase glows while the mic listens), Gemini narrator voice, soft background sound, and automatic cleanup of misheard words.
 - **You stay in control:** edit the bible and lore mid-story (your edits win over earlier narration), undo a turn (memory included), watch the cost meter, save adventures as plain JSON files.
 
