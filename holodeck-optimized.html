@@ -39,7 +39,7 @@
   .box{max-width:640px;margin:0 auto}
   .box h1{color:var(--accent);letter-spacing:.12em;margin:10px 0 4px}
   .big{display:block;width:100%;text-align:left;padding:16px;margin:12px 0;font-size:18px}
-  .big small{display:block;color:var(--dim);font-size:14px}
+  .big small{display:block;color:var(--dim);font-size:14px}.big.primary small{color:#023;opacity:.8}
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
   .chip{border-radius:999px;padding:6px 12px;font-size:14px}
   .chip.sel{background:var(--accent);color:#012;border-color:var(--accent)}
@@ -306,6 +306,10 @@
     <div class="tag">Your name</div><div class="row"><input id="meName" placeholder="Your name" autocomplete="off"></div>
     <div class="tag">Your age</div><div class="row"><input id="meAge" type="number" min="3" max="120" placeholder="e.g. 10, 35 or 70"></div>
     <div id="meRomanceRow"><div class="tag">Romance (optional, adults only)</div><div class="row"><input id="meRomance" placeholder="I am a ... who is interested in ..." autocomplete="off"></div></div>
+  </div>
+  <div id="curDepth" style="display:none">
+    <button class="big" id="depQuick">Quick start<small>Describe what you want in a sentence or two. The holodeck fills in the rest as best it can, and the game begins.</small></button>
+    <button class="big" id="depDeep">Deep set-up<small>A carefully curated experience: optionally upload a photo to paint the world from, then a few more questions, with suggestions tailored to what you have told me.</small></button>
   </div>
   <textarea id="curA" placeholder="Type your own answer, or tap options above..."></textarea>
   <div class="nav2">
@@ -1554,8 +1558,9 @@ const QBY = Object.fromEntries(QUESTIONS.map(q => [q.id, q]));
 // Question 4: name, age and (adults only) romance, in one step of three boxes. Pre-filled from Settings > Personal details.
 const ME_Q = { id: 'me', me: true, q: 'About you', h: 'Your name and age shape the whole story: a 10-year-old and a 70-year-old get very different experiences. Filled in from Settings > Personal details; change them to play as someone else. Romance is only offered to adults.', c: [] };
 // Question 5: a quick description and go, or the deep set-up (photo and the detailed questions).
-const DEPTH_Q = { id: 'depth', single: true, q: 'Quick start or deep set-up?', h: 'Quick: describe what you are after in your own words and go. Deep: add a photo if you like, then the detailed questions, with suggestions shaped by everything you have said so far.', c: ['Quick: describe it and go', 'Deep: photo and detailed questions'] };
-const DESCRIBE_Q = { id: 'describe', q: 'Describe what you are looking for.', h: 'A sentence or a paragraph: the world, who you are, what you would like to happen. The holodeck fills in the rest.', c: [], ph: 'e.g. A pirate adventure with my pet dragon, hunting for treasure on a volcano island' };
+// Two big buttons: Quick shows a box to describe the experience (Next then creates it); Deep moves straight on to the photo and the detailed
+// questions. The detailed questions are only counted ("Question 5 of 5") once Deep is chosen.
+const DEPTH_Q = { id: 'depth', depth: true, q: 'Quick start or deep set-up?', h: 'Pick how much you want to set up.', c: [], ph: 'e.g. A pirate adventure with my pet dragon, hunting for treasure on a volcano island' };
 function mePrefill() {   // answers filled in from Settings > Personal details
   // Gender and interest are free text: common words read naturally ("a man", "women"); anything else is used as written.
   const me = S().me || {}, out = {}, g = String(me.gender || '').trim(), i = String(me.interest || '').trim();
@@ -1572,7 +1577,7 @@ const WHO2_Q = { id: 'who', q: 'Who are you this time?', h: 'Keep your character
 const STORY_IDS = ['world', 'vibe', 'who', 'traits', 'where', 'hook', 'allies', 'threat', 'play', 'avoid'], SIM_IDS = ['world', 'where', 'goal', 'who', 'allies', 'avoid'];
 const simPick = () => /simulat/i.test(cur.answers.mode || '');
 const shortPick = () => !!cur.answers.time && !isNoPref(cur.answers.time) && minutesOf(cur.answers.time) <= 15;   // a short session was chosen
-const quickPick = () => /^quick/i.test(cur.answers.depth || '');
+const quickPick = () => /^quick/i.test(cur.answers.depth || ''), deepPick = () => /^deep/i.test(cur.answers.depth || '');
 const ageNow = () => +cur.answers.age || 0, kidPick = () => ageNow() > 0 && ageNow() < 13, minorPick = () => ageNow() > 0 && ageNow() < 18;
 // children get their own chips; short stories get the grounded ones; under-18s never see romance options
 const chipsOf = q => (q.ck && kidPick() ? q.ck : q.cs && shortPick() ? q.cs : q.c).filter(c => !(minorPick() && /roman[ct]|love/i.test(c)));
@@ -1582,7 +1587,7 @@ let cur = { i: 0, answers: {}, extra: {}, rounds: {} };
 function curQs() {   // the list depends on the play mode and set-up depth you pick (and a new story with the same cast skips the world questions)
   const sim = simPick(), head = [QBY.time, QBY.feeling, QBY.mode, ME_Q];
   if (cur.src) return head.concat([LINK_Q, sim ? QBY.goal : QBY.hook, WHO2_Q], sim ? [] : [QBY.vibe, QBY.play], [QBY.avoid]);
-  return head.concat([DEPTH_Q], quickPick() ? [DESCRIBE_Q] : [QBY.photo].concat((sim ? SIM_IDS : STORY_IDS).map(id => QBY[id])));
+  return head.concat([DEPTH_Q], deepPick() ? [QBY.photo].concat((sim ? SIM_IDS : STORY_IDS).map(id => QBY[id])) : []);
 }
 // Adventures made before answers had ids stored them by position.
 const OLD_IDS = ['world', 'vibe', 'who', 'traits', 'where', 'hook', 'allies', 'threat', 'play', 'avoid', 'length', 'romance'];
@@ -1593,7 +1598,7 @@ function curatorAnswer(a, id) {
 // ---------------- Extra options: if the player lingers on a question, the cheap model suggests more chips that fit their earlier answers ----------------
 // The offline demo has no model, so it shows a few ready-made extras instead.
 const DEMO_MORE = { feeling: ['Cosy belonging', 'Mischievous fun', 'Quiet pride', 'Bittersweet longing', 'Fearless freedom', 'Childlike delight'],
-  describe: [], goal: ['Find the best view in town', 'Cook a meal with a local', 'Win over a grumpy regular', 'Learn the local dance'], world: ['Ancient Rome', '1960s Hollywood', 'A Caribbean island', 'Small-town carnival'], vibe: ['Dreamy', 'Bittersweet', 'Swashbuckling', 'Eerie'],
+  goal: ['Find the best view in town', 'Cook a meal with a local', 'Win over a grumpy regular', 'Learn the local dance'], world: ['Ancient Rome', '1960s Hollywood', 'A Caribbean island', 'Small-town carnival'], vibe: ['Dreamy', 'Bittersweet', 'Swashbuckling', 'Eerie'],
   who: ['A retired thief', 'A ship\'s cook', 'A disgraced knight', 'A street magician'], traits: ['Kind but naive', 'Proud but loyal', 'Curious but clumsy', 'Calm but secretive'],
   where: ['A floating market', 'A snowbound monastery', 'A lighthouse at dusk', 'A jungle ruin'], hook: ['Deliver a secret message', 'Break a curse', 'Win a contest', 'Clear your name'],
   allies: ['An old friend', 'A reluctant guard', 'A clever child', 'A robot companion'], threat: ['A corrupt official', 'A rival treasure hunter', 'A spreading plague', 'A broken promise'],
@@ -1647,10 +1652,14 @@ function curRender() {
   $('curStep').textContent = 'Question ' + (cur.i + 1) + ' of ' + n;
   $('curQ').textContent = q.q; $('curHint').textContent = q.h + (cur.fromPhoto && cur.fromPhoto.includes(q.id) ? ' (Filled in from your photo: change anything you like.)' : '');
   $('curPhoto').style.display = q.photo ? '' : 'none'; showPhoto();
-  $('curMe').style.display = q.me ? '' : 'none'; $('curA').style.display = q.me ? 'none' : ''; $('curSkip').style.display = q.me ? 'none' : '';
+  const quick = q.depth && quickPick();
+  $('curMe').style.display = q.me ? '' : 'none'; $('curDepth').style.display = q.depth ? '' : 'none'; $('curSkip').style.display = q.me ? 'none' : '';
+  $('curA').style.display = q.me || (q.depth && !quick) ? 'none' : ''; $('curNext').style.display = q.depth && !quick ? 'none' : '';
+  $('depQuick').classList.toggle('primary', quick); $('depDeep').classList.toggle('primary', q.depth && deepPick());
+  if (q.depth) $('curHint').textContent = quick ? 'Describe it in a sentence or a paragraph, then press "Create my experience".' : q.h;
   if (q.me) { $('meName').value = cur.answers.name || ''; $('meAge').value = cur.answers.age || ''; $('meRomance').value = cur.answers.romance || ''; meRomanceShow(); }
   $('curFinish').style.display = cur.photo && cur.photo.canvas && cur.i < n - 1 ? '' : 'none';
-  $('curA').value = cur.answers[q.id] || ''; $('curA').placeholder = q.ph || 'Type your own answer, or tap options above...';
+  $('curA').value = (q.depth ? cur.answers.describe : cur.answers[q.id]) || ''; $('curA').placeholder = q.ph || 'Type your own answer, or tap options above...';
   $('curChips').innerHTML = chipsOf(q).map(c => '<button class="chip" data-c="' + esc(c) + '">' + esc(c) + '</button>').join('');
   if (cur.extra[q.id]) addExtraChips(cur.extra[q.id]); else wireChips();
   $('curBack').disabled = cur.i === 0;
@@ -1661,6 +1670,7 @@ function curChips() { const parts = $('curA').value.split(/,\s*/); $('curChips')
 $('curA').addEventListener('input', () => { curChips(); armMore(); });
 function curStore() {
   const q = curQs()[cur.i]; if (!q) return;
+  if (q.depth) { if (quickPick()) cur.answers.describe = $('curA').value.trim(); return; }
   if (!q.me) { cur.answers[q.id] = $('curA').value.trim(); return; }
   const n = +$('meAge').value; cur.answers.name = $('meName').value.trim(); cur.answers.age = n > 0 ? String(Math.round(n)) : '';
   cur.answers.romance = minorPick() ? '' : $('meRomance').value.trim(); cur.answers.me = meSummary();
@@ -1668,8 +1678,10 @@ function curStore() {
 function meSummary() { const x = cur.answers; return [x.name && 'name ' + x.name, x.age && 'age ' + x.age, x.romance && 'romance: ' + x.romance].filter(Boolean).join('; ') || '(not given)'; }
 function meRomanceShow() { const n = +$('meAge').value; $('meRomanceRow').style.display = n > 0 && n < 18 ? 'none' : ''; }
 $('meAge').addEventListener('input', meRomanceShow);
+$('depQuick').onclick = () => { cur.answers.depth = 'Quick start'; curRender(); $('curA').focus(); };
+$('depDeep').onclick = () => { cur.answers.depth = 'Deep set-up'; delete cur.answers.describe; curAdvance(); };
 $('curBack').onclick = () => { curStore(); if (cur.i > 0) { cur.i--; curRender(); } };
-$('curSkip').onclick = () => { const q = curQs()[cur.i]; if (q.photo) { cur.photo = null; $('photoFile').value = ''; } $('curA').value = ''; cur.answers[q.id] = NOPREF; curAdvance(); };
+$('curSkip').onclick = () => { const q = curQs()[cur.i]; if (q.depth) { cur.answers.depth = 'Quick start'; cur.answers.describe = NOPREF; curAdvance(); return; } if (q.photo) { cur.photo = null; $('photoFile').value = ''; } $('curA').value = ''; cur.answers[q.id] = NOPREF; curAdvance(); };
 $('curNext').onclick = async () => {
   curStore(); const q = curQs()[cur.i];
   if (q.photo && cur.photo && !cur.photo.canvas && !(await readPhoto())) return;   // the photo is studied once, when you leave this step
@@ -1746,7 +1758,8 @@ async function readPhoto() {   // returns false if it failed (you stay on the ph
 async function curAdvance() {
   const qs = curQs();
   if (cur.i < qs.length - 1) { cur.i++; curRender(); return; }
-  const answers = qs.flatMap(q => q.me ? [{ id: 'name', q: 'Your name', a: cur.answers.name }, { id: 'age', q: 'Your age', a: cur.answers.age }, { id: 'romance', q: 'Romance', a: cur.answers.romance }].filter(x => x.a)
+  const answers = qs.flatMap(q => q.depth ? [{ id: 'depth', q: 'Set-up', a: cur.answers.depth }, { id: 'describe', q: 'What you are looking for', a: cur.answers.describe }].filter(x => x.a)
+    : q.me ? [{ id: 'name', q: 'Your name', a: cur.answers.name }, { id: 'age', q: 'Your age', a: cur.answers.age }, { id: 'romance', q: 'Romance', a: cur.answers.romance }].filter(x => x.a)
     : [{ id: q.id, q: q.q, a: cur.answers[q.id] || '(no preference)' }]);
   { const me = Object.assign({}, S().me), nm = cur.answers.name, age = +cur.answers.age; let ch = false;   // remember your name and age for next time (never overwrites them)
     if (nm && !me.name) { me.name = nm; $('setMeName').value = nm; ch = true; }
@@ -1929,7 +1942,7 @@ async function createAdventure(name, answers, cats, srcName, photo) {
     a.bible = '# Story Bible\n\n' + stripWishes(src.bible).replace(/^#[^\n]*\n+/, '') + '\n\n**New story:** ' + g('link') + '. ' + g('hook') + '.';
     if (src.gm) a.gm = structuredClone(src.gm);
   } else {
-    const L = (k, v) => '\n\n**' + k + ':** ' + v;
+    const L = (k, v) => !String(v || '').trim() ? '' : '\n\n**' + k + ':** ' + v;
     a.bible = '# Story Bible' + (g('describe') ? L('What you asked for', g('describe')) : '') + L('Premise', (g('world') || 'Open') + (g('vibe') ? ' · ' + g('vibe') : '')) + L('Player character', g('who') + (g('traits') ? '. ' + g('traits') : '')) + L('Setting', g('where') || (photo ? photo.place + ', ' + photo.era : '')) +
       (sim ? '' : L('Central hook', g('hook')) + L('Main threat', g('threat')) + L('Style of play', g('play'))) + L('Company', g('allies')) + (g('romance') ? L('Romance', g('romance')) : '');
   }
