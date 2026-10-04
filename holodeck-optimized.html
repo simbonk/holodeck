@@ -218,9 +218,11 @@
           <label>Your name</label>
           <div class="row"><input id="setMeName" placeholder="e.g. Simon" autocomplete="off"></div>
           <label>Gender</label>
-          <div class="row"><select id="setMeGender" style="width:100%"><option value="">(not set)</option><option>Male</option><option>Female</option><option>Non-binary</option></select></div>
+          <div class="row"><input id="setMeGender" list="meGenders" placeholder="In your own words, e.g. male" autocomplete="off"></div>
+          <datalist id="meGenders"><option value="Male"><option value="Female"><option value="Non-binary"></datalist>
           <label>Interested in (romance)</label>
-          <div class="row"><select id="setMeInterest" style="width:100%"><option value="">(not set)</option><option>Women</option><option>Men</option><option>Everyone</option></select></div>
+          <div class="row"><input id="setMeInterest" list="meInterests" placeholder="In your own words, e.g. women" autocomplete="off"></div>
+          <datalist id="meInterests"><option value="Women"><option value="Men"><option value="Everyone"></datalist>
           <label>Birth year (lets the story pitch nostalgia and era details to your age)</label>
           <div class="row"><input id="setMeBorn" type="number" min="1900" max="2030" placeholder="e.g. 1980"></div>
         </div>
@@ -1512,9 +1514,12 @@ const QBY = Object.fromEntries(QUESTIONS.map(q => [q.id, q]));
 // Follow-up asked last, only when the vibe (or genre) includes romance and the boundaries do not rule it out. Free text, no chips.
 const NAME_Q = { id: 'name', q: 'Last thing: what is your name in this story?', h: 'Kept in Settings > Personal details, so next time it is filled in for you. Change it here to play someone else.', c: [], ph: 'Your name' };
 function mePrefill() {   // answers filled in from Settings > Personal details
-  const me = S().me || {}, out = {}, who = { Male: 'a man', Female: 'a woman', 'Non-binary': 'a non-binary person' }[me.gender], what = { Women: 'women', Men: 'men', Everyone: 'anyone who catches my eye' }[me.interest];
+  // Gender and interest are free text: common words read naturally ("a man", "women"); anything else is used as written.
+  const me = S().me || {}, out = {}, g = String(me.gender || '').trim(), i = String(me.interest || '').trim();
+  const who = { male: 'a man', man: 'a man', m: 'a man', female: 'a woman', woman: 'a woman', f: 'a woman', 'non-binary': 'a non-binary person', nonbinary: 'a non-binary person' }[g.toLowerCase()] || (!g ? 'someone' : /^(a|an|the)\s/i.test(g) ? g : /\b(wo)?m[ae]n|person|guy|girl|boy|lady|dude|gal|bloke\b/i.test(g) ? 'a ' + g : 'someone who is ' + g);
+  const what = { everyone: 'anyone who catches my eye', anyone: 'anyone who catches my eye', both: 'women and men' }[i.toLowerCase()] || i.toLowerCase();
   if (me.name) out.name = me.name;
-  if (who || what) out.romance = 'I am ' + (who || 'someone') + ' who is interested in ' + (what || '...');
+  if (g || i) out.romance = 'I am ' + who + (who.startsWith('someone who') ? ' and' : ' who is') + ' interested in ' + (what || '...');
   return out;
 }
 const ROMANCE_Q = { id: 'romance', q: 'Romance: you are a ___ who is interested in ___.', h: 'Fill in the blanks in your own words, e.g. "a retired spy who is interested in the new neighbour" or "a nervous bard who is interested in women".', c: [], ph: 'I am a ... who is interested in ...' };
@@ -2152,7 +2157,7 @@ function collectSettings() {   // the browser voice is saved by its own handler 
   return { effort: $('setEffort').value, effortV: 3, notesV: 2, ttsV: 1, voiceV: 3, ttsChunkV: 2, welcomed: true, tune_recent: +$('setTuneRecent').value, tune_chapters: +$('setTuneChapters').value, tune_recall: +$('setTuneRecall').value,
     notesModel: $('setNotesModel').value, ttsChunk: $('setTtsChunk').value, prices: $('setPrices').value.trim() || GEMINI.prices, key: $('setKey').value.trim(), model: $('setModel').value.trim(), cheap: $('setCheap').value.trim(), fake: $('setFake').checked,
     embed: $('setEmbed').value.trim(), noEmbed: $('setNoEmbed').checked, speak: $('setSpeak').checked, cleanDict: $('setCleanDict').checked, ambient: $('setAmbient').value,
-    me: { name: $('setMeName').value.trim(), gender: $('setMeGender').value, interest: $('setMeInterest').value, born: +$('setMeBorn').value || 0 },
+    me: { name: $('setMeName').value.trim(), gender: $('setMeGender').value.trim(), interest: $('setMeInterest').value.trim(), born: +$('setMeBorn').value || 0 },
     rate: +$('setRate').value, ttsEngine: $('setEngine').value, ttsVoice: ttsVoiceValue(), ttsModel: $('setTtsModel').value.trim(), ttsStyle: $('setTtsStyle').value.trim() };
 }
 function keyStatus() {
