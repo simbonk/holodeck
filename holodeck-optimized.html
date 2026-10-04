@@ -39,7 +39,7 @@
   .box{max-width:640px;margin:0 auto}
   .box h1{color:var(--accent);letter-spacing:.12em;margin:10px 0 4px}
   .big{display:block;width:100%;text-align:left;padding:16px;margin:12px 0;font-size:18px}
-  .big small{display:block;color:var(--dim);font-size:14px}
+  .big small{display:block;color:var(--dim);font-size:14px}.big.primary small{color:#023;opacity:.8}
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
   .chip{border-radius:999px;padding:6px 12px;font-size:14px}
   .chip.sel{background:var(--accent);color:#012;border-color:var(--accent)}
@@ -263,7 +263,7 @@
   <button id="closeStart" style="display:none;float:right">&#10005; Back to adventure</button>
   <h1>HOLODECK</h1>
   <p class="tag">Your story, your vibe. Everything is remembered.</p>
-  <button class="big primary" id="newExpBtn">Set up a new experience<small>A few quick questions: your time, the feeling you want, and the world</small></button>
+  <button class="big primary" id="newExpBtn">Set up a new experience<small>A few quick questions: your time, the feeling you want, a little about you, and the world</small></button>
   <button class="big" id="contBtn">Continue an experience<small id="contSub">Pick up where you left off</small></button>
   <div id="contList" style="display:none"></div>
   <button class="big" id="startSettings">Settings<small>API key, voice, models and tuning: change them any time</small></button>
@@ -272,7 +272,7 @@
 <!-- FIRST-RUN WELCOME -->
 <div id="welcome" class="overlay"><div class="box">
   <h1>WELCOME TO THE HOLODECK</h1>
-  <p>An AI Game Master runs a story made just for you. Answer a few quick questions (how much time you have, the feeling you want, and the world, or just upload a photo), then play by typing or talking. It remembers everything, keeps an eye on the clock, lands a real ending and grades the result.</p>
+  <p>An AI Game Master runs a story made just for you. Answer a few quick questions (how much time you have, the feeling you want, your name and age, then either a quick description or a deeper set-up with a photo), then play by typing or talking. It remembers everything, keeps an eye on the clock, lands a real ending and grades the result.</p>
   <h3>SET UP IN ABOUT A MINUTE</h3>
   <ol><li>Get a free Gemini API key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--accent)">aistudio.google.com/apikey</a>.</li><li>Paste it below.</li><li>Press Start.</li></ol>
   <div class="row"><input id="wKey" type="password" placeholder="Paste your API key" autocomplete="off"></div>
@@ -301,6 +301,15 @@
     <input type="file" id="photoFile" accept="image/*" style="display:none">
     <button id="photoBtn">&#128247; Choose a photo</button> <button id="photoClear" class="mini" style="display:none">Remove</button> <span class="tag" id="photoName"></span>
     <img id="photoPrev" alt="" style="display:none;max-width:100%;max-height:260px;border-radius:8px;margin-top:10px">
+  </div>
+  <div id="curMe" style="display:none;margin:12px 0">
+    <div class="tag">Your name</div><div class="row"><input id="meName" placeholder="Your name" autocomplete="off"></div>
+    <div class="tag">Your age</div><div class="row"><input id="meAge" type="number" min="3" max="120" placeholder="e.g. 10, 35 or 70"></div>
+    <div id="meRomanceRow"><div class="tag">Romance (optional, adults only)</div><div class="row"><input id="meRomance" placeholder="I am a ... who is interested in ..." autocomplete="off"></div></div>
+  </div>
+  <div id="curDepth" style="display:none">
+    <button class="big" id="depQuick">Quick start<small>Describe what you want in a sentence or two. The holodeck fills in the rest as best it can, and the game begins.</small></button>
+    <button class="big" id="depDeep">Deep set-up<small>A carefully curated experience: optionally upload a photo to paint the world from, then a few more questions, with suggestions tailored to what you have told me.</small></button>
   </div>
   <textarea id="curA" placeholder="Type your own answer, or tap options above..."></textarea>
   <div class="nav2">
@@ -624,6 +633,20 @@ function feelingRules(a) {
   return '## THE FEELING TO ACHIEVE (your main goal)\n' + f + '\n' + (craft.length ? craft.join('\n') : '- Work out what creates this feeling for this player and build every reply around it.') +
     '\n- Every reply should leave the player feeling more of this. Read how they respond; if the feeling is landing, keep doing what works.';
 }
+// The player's age (asked in the set-up) shapes everything: a 10-year-old and a 70-year-old get very different experiences.
+function ageRules(a) {
+  const n = +a.age || 0; if (!n) return '';
+  if (n < 13) return `## THE PLAYER IS A CHILD (age ${n}). This overrides everything else, including the bible and the feeling.
+- G-rated, like a great children's book or animated film. Simple, vivid words and short sentences a ${n}-year-old reads easily; keep replies short.
+- No romance, kissing or flirting at all. If the feeling mentions love or connection, make it friendship, family or a beloved pet.
+- No gore, no deaths of people they care about, no swearing, drugs, alcohol or genuinely frightening horror. Peril is exciting but safe; villains can be outwitted, defeated or befriended.
+- Humour is silly, playful and warm; slapstick and funny animals are welcome. Make the child the hero: their ideas work, and cleverness, courage and kindness are rewarded.`;
+  if (n < 18) return `## THE PLAYER IS A TEENAGER (age ${n}). This overrides the bible where they conflict.
+- PG: no romance or flirting aimed at the player and nothing physical (friendships, loyalty and the odd crush mentioned in passing are fine). If the feeling mentions love, make it friendship or belonging.
+- No graphic violence, sexual content, drugs or heavy swearing. Pitch the vocabulary and themes at a smart ${n}-year-old: adventure, friendship, identity, standing up for what is right.`;
+  return `## THE PLAYER'S AGE: ${n}. Pitch cultural references, nostalgia and themes to someone of that age (the music, films, technology and events of their youth land well).` +
+    (n >= 60 ? ' Keep the text easy to read and the pace comfortable, and never patronise: they have seen a lot and enjoy craft and wit.' : '');
+}
 function modeRules(a) {
   if (isSim(a)) return `## PLAY MODE: EXPERIENCE SIMULATOR (where this conflicts with the standards above, this wins)
 - There is NO plot to get through: no villain, mystery, ticking clock, twist or big reveal unless the player asks for one.
@@ -730,7 +753,7 @@ async function takeTurn(input, hidden, onDelta) {
   // message, then the conversation; only the last message changes every turn. It carries this turn's private briefing (map, recalled
   // memories, director notes, hand changes) followed by the player's action, and is not stored, so earlier turns stay byte-for-byte identical.
   const me = Object.values(a.lore).find(e => e.isPlayer);
-  const system = GM_RULES + (isShort(a) ? '\n' + shortRules(a) : '') + (me && me.name !== 'You' ? '\n\nTHE PLAYER CHARACTER is ' + me.name + ', and that is "you": narrate everything they do and feel as "you"; the name ' + me.name + ' appears only in other characters\' dialogue.' : '') + '\n\n' + feelingRules(a) + '\n\n' + modeRules(a) + '\n\n## STORY BIBLE\n' + a.bible +
+  const system = GM_RULES + (isShort(a) ? '\n' + shortRules(a) : '') + (me && me.name !== 'You' ? '\n\nTHE PLAYER CHARACTER is ' + me.name + ', and that is "you": narrate everything they do and feel as "you"; the name ' + me.name + ' appears only in other characters\' dialogue.' : '') + '\n\n' + feelingRules(a) + '\n\n' + modeRules(a) + (a.age ? '\n\n' + ageRules(a) : '') + '\n\n## STORY BIBLE\n' + a.bible +
     (a.photo && a.photo.canvas ? "\n\n## THE WORLD AS PAINTED FROM THE PLAYER'S PHOTO (keep it faithful)\n" + a.photo.canvas : '') +
     (pinned.length ? '\n\n## PLAYER-SET FACTS (written by the player; they override earlier narration, lore and notes)\n' + pinnedLines.map(x => '- ' + x).join('\n') : '') +
     '\n\n## STORY SO FAR (chapter summaries)\n' + chapters + '\n\n## PRIVATE GM NOTES (never reveal outright)\n' + gmText(a) +
@@ -828,7 +851,7 @@ const WISH_HEAD = "## Player's Wishes (from the Experience Curator)", WISH_HEADS
 function wishAt(b) { const xs = WISH_HEADS.map(h => b.indexOf(h)).filter(i => i >= 0); return xs.length ? Math.min(...xs) : -1; }
 function stripWishes(b) { const i = wishAt(b); return (i >= 0 ? b.slice(0, i) : b).trim(); }
 function wishesSection(a) {
-  const c = (a.curator || []).filter(x => !['feeling', 'goal', 'time', 'mode'].includes(x.id));
+  const c = (a.curator || []).filter(x => !['feeling', 'goal', 'time', 'mode', 'depth'].includes(x.id));
   return WISH_HEAD + '\n' + (a.feeling ? FEEL_LINE + ' ' + a.feeling + '\n' : '') + (a.mode ? '**Play mode:** ' + (isSim(a) ? 'Experience simulator (no plot points; focus on the feeling and the player\'s goal)' : 'Curated story (a hidden roadmap that bends to the player)') + '\n' : '') +
     (a.goal ? GOAL_LINE + ' ' + a.goal + '\n' : '') + (a.minutes ? '**Session length:** ' + a.minutes + ' minutes\n' : '') + (c.length ? c.map(x => '- **' + x.q + '** ' + x.a).join('\n') : '(none recorded)');
 }
@@ -1495,62 +1518,76 @@ $('micBtn').onclick = () => {
 };
 
 // ---------------- Experience Curator ----------------
-// Answers are stored by question id. Every experience starts with three questions: how much time you have, the feeling you want, and how
-// you want to play (a curated story or a plot-free experience simulator). Then an optional photo can paint the world and answer the rest.
+// Answers are stored by question id. Every experience starts with five questions: how much time you have, the feeling you want, how you want
+// to play (a curated story or a plot-free experience simulator), about you (name, age, and romance for adults), and how much to set up:
+// "quick" is one free-text description, "deep" offers a photo (which can paint the world and answer the rest) and the detailed questions.
+// Children (under 13) get their own option chips (ck), and the AI-suggested options take everything said so far into account, age included.
 // A session of 15 minutes or less is told as a clean, simple short story, and its option chips (cs) stay on Earth, in familiar times.
 const QUESTIONS = [
   { id: 'time', single: true, q: 'How much time do you have?', h: 'You play by the clock, not by turns. The Game Master keeps an eye on the time and lands a proper ending before it runs out, then you get a report card. 10-15 minutes makes a quick short story.', c: ['10 minutes (a quick story)', '20 minutes', '30 minutes', '45 minutes', '1 hour', '2 hours (an epic)'], ph: 'Or type your own, e.g. 25 minutes' },
   { id: 'feeling', q: 'What feeling do you want to come away with?', h: 'This is the Game Master\'s main goal: everything bends toward it. Pick one or two, or describe it in your own words. Wait a moment and more ideas appear.', c: FEELINGS, ph: 'e.g. the cosy feeling of a snow day with nowhere to be' },
   { id: 'mode', single: true, q: 'How do you want to play?', h: 'Curated story: a hidden plot with a beginning, middle and end, which bends (or waits) when you are happy elsewhere. Experience simulator: no plot points at all, just a richly painted world, your own goal and the feeling.', c: ['Curated story (a plot that bends to you)', 'Experience simulator (no plot, just the world and the feeling)'] },
   { id: 'photo', photo: true, q: 'Paint the world from a photo?', h: 'Optional. A picture is worth a thousand words: the holodeck works out the place, the time and the people, writes the world from them, and fills in the remaining questions for you. Add a caption if you like.', c: [], ph: 'Optional caption: who or where is this? e.g. "Me and Dana in Lisbon, summer 2019"' },
-  { id: 'goal', q: 'What do you want to do there?', h: 'Your goal for this experience. The Game Master helps you do it, with no plot getting in the way. You can change your mind once you are there.', c: ['Explore every corner', 'Spend time with someone special', 'Learn a craft from a local', 'Eat my way through the place', 'Do absolutely nothing', 'Throw a party'], ph: 'e.g. Spend an evening in Ten Forward swapping stories with Guinan' },
+  { id: 'goal', q: 'What do you want to do there?', h: 'Your goal for this experience. The Game Master helps you do it, with no plot getting in the way. You can change your mind once you are there.', c: ['Explore every corner', 'Spend time with someone special', 'Learn a craft from a local', 'Eat my way through the place', 'Do absolutely nothing', 'Throw a party'],
+    ck: ['Explore every corner', 'Make friends with the animals', 'Build something amazing', 'Find all the secret places', 'Have a feast', 'Learn some magic'], ph: 'e.g. Spend an evening in Ten Forward swapping stories with Guinan' },
   { id: 'world', q: 'What kind of world do you want to step into?', h: 'Genre and setting.', c: ['Noir detective', 'Space opera', 'High fantasy', 'Cyberpunk', 'Cozy mystery', 'Gothic horror', 'Wild West', 'Post-apocalypse', 'Pirate seas', 'Historical', 'Superhero', 'Surprise me'],
-    cs: ['Small-town mystery', 'Big-city detective', 'Seaside village', 'Tropical beach town', 'Road trip', 'Wild West', 'Pirate seas', 'Roaring Twenties', 'Cold War spies', 'Victorian London', 'Modern-day heist', 'Surprise me'] },
-  { id: 'vibe', q: 'What vibe should it have?', h: 'Pick a mood; more than one is fine.', c: ['Gritty', 'Whimsical', 'Epic', 'Cozy', 'Tense', 'Funny', 'Melancholic', 'Romantic', 'Mysterious', 'Wholesome'] },
+    cs: ['Small-town mystery', 'Big-city detective', 'Seaside village', 'Tropical beach town', 'Road trip', 'Wild West', 'Pirate seas', 'Roaring Twenties', 'Cold War spies', 'Victorian London', 'Modern-day heist', 'Surprise me'],
+    ck: ['Dragons and castles', 'Space adventure', 'Magic school', 'Pirate treasure hunt', 'Dinosaur island', 'Superheroes', 'Underwater kingdom', 'Talking animals', 'A friendly haunted house', 'Jungle explorer', 'Toys come alive', 'Surprise me'] },
+  { id: 'vibe', q: 'What vibe should it have?', h: 'Pick a mood; more than one is fine.', c: ['Gritty', 'Whimsical', 'Epic', 'Cozy', 'Tense', 'Funny', 'Melancholic', 'Romantic', 'Mysterious', 'Wholesome'],
+    ck: ['Funny', 'Exciting', 'Magical', 'Cozy', 'Silly', 'Mysterious (not too scary)', 'Brave', 'Wholesome'] },
   { id: 'who', q: 'Who are you in this story?', h: 'Name, role, background. A sentence is enough.', c: ['A weary detective', 'A rookie adventurer', 'A smuggler', 'A scholar', 'A soldier turned outcast', 'A stranger with amnesia'],
-    cs: ['A small-town reporter', 'A retired detective', 'A ship\'s cook', 'A wedding photographer', 'A taxi driver', 'A schoolteacher'] },
-  { id: 'traits', q: 'What are your character\'s strengths and flaws?', h: 'These will matter in the story.', c: ['Clever but reckless', 'Strong but stubborn', 'Charming but dishonest', 'Brave but haunted', 'Lucky but broke'] },
+    cs: ['A small-town reporter', 'A retired detective', 'A ship\'s cook', 'A wedding photographer', 'A taxi driver', 'A schoolteacher'],
+    ck: ['A young wizard', 'A brave knight', 'A space cadet', 'A kid detective', 'A dragon rider', 'A pirate captain', 'A superhero in training', 'A talking animal'] },
+  { id: 'traits', q: 'What are your character\'s strengths and flaws?', h: 'These will matter in the story.', c: ['Clever but reckless', 'Strong but stubborn', 'Charming but dishonest', 'Brave but haunted', 'Lucky but broke'],
+    ck: ['Clever but impatient', 'Brave but clumsy', 'Kind but shy', 'Fast but forgetful', 'Funny but a bit loud'] },
   { id: 'where', q: 'Where and when does it begin?', h: 'Place, era, weather, atmosphere.', c: ['A rainy harbour town', 'A remote space station', 'A royal capital on a festival night', 'A desert outpost', 'A train in motion', 'A city that never sleeps'],
-    cs: ['A small coastal town', 'A busy train station', 'A family wedding', 'A hotel during a storm', 'A coffee farm in the hills', 'A city at night'] },
-  { id: 'hook', q: 'What is pulling you into the story?', h: 'The hook or central goal.', c: ['Find someone missing', 'Solve a crime', 'Survive and escape', 'Recover a lost treasure', 'Uncover a conspiracy', 'Protect someone', 'Settle a score', 'Build something new'] },
-  { id: 'allies', q: 'Who is by your side?', h: 'Allies, companions, or none.', c: ['Lone wolf', 'A loyal sidekick', 'A rival turned ally', 'A small crew', 'A mysterious mentor', 'A talking animal'] },
+    cs: ['A small coastal town', 'A busy train station', 'A family wedding', 'A hotel during a storm', 'A coffee farm in the hills', 'A city at night'],
+    ck: ['A castle on a cloud', 'A secret treehouse', 'A spaceship', 'A magical forest', 'A pirate ship', 'An underwater city'] },
+  { id: 'hook', q: 'What is pulling you into the story?', h: 'The hook or central goal.', c: ['Find someone missing', 'Solve a crime', 'Survive and escape', 'Recover a lost treasure', 'Uncover a conspiracy', 'Protect someone', 'Settle a score', 'Build something new'],
+    ck: ['Find a lost pet', 'Find hidden treasure', 'Rescue a friend', 'Win a big contest', 'Solve a mystery', 'Save the kingdom', 'Make a new friend'] },
+  { id: 'allies', q: 'Who is by your side?', h: 'Allies, companions, or none.', c: ['Lone wolf', 'A loyal sidekick', 'A rival turned ally', 'A small crew', 'A mysterious mentor', 'A talking animal'],
+    ck: ['A loyal dog', 'A baby dragon', 'A robot friend', 'My best friend', 'A wise owl', 'A friendly ghost'] },
   { id: 'threat', q: 'What stands in your way?', h: 'The main threat or antagonist.', c: ['A shadowy organisation', 'A single cunning villain', 'Nature itself', 'A ticking clock', 'My own past', 'Something supernatural', 'Betrayal from within'],
-    cs: ['A clever con artist', 'A storm', 'A rival', 'A ticking clock', 'A family secret', 'A misunderstanding'] },
+    cs: ['A clever con artist', 'A storm', 'A rival', 'A ticking clock', 'A family secret', 'A misunderstanding'],
+    ck: ['A grumpy troll', 'A sneaky thief', 'A big storm', 'A mischievous wizard', 'A ticking clock', 'A runaway robot'] },
   { id: 'play', q: 'How do you like to play?', h: 'Style of play and difficulty.', c: ['Lots of dialogue', 'Action heavy', 'Exploration', 'Puzzles and clues', 'Forgiving', 'Dangerous, with real consequences', 'Short punchy replies', 'Rich, detailed prose'] },
-  { id: 'avoid', q: 'Anything to avoid, or anything else to know?', h: 'Content boundaries, favourite books/films to echo, special requests.', c: ['Keep it PG-13', 'No gore', 'No romance', 'In the style of a classic novel', 'Nothing off limits within reason'] }
+  { id: 'avoid', q: 'Anything to avoid, or anything else to know?', h: 'Content boundaries, favourite books/films to echo, special requests.', c: ['Keep it PG-13', 'No gore', 'No romance', 'In the style of a classic novel', 'Nothing off limits within reason'],
+    ck: ['Nothing too scary', 'No spiders', 'Lots of jokes', 'In the style of a fairy tale'] }
 ];
 const QBY = Object.fromEntries(QUESTIONS.map(q => [q.id, q]));
-// Follow-up asked last, only when the vibe (or genre) includes romance and the boundaries do not rule it out. Free text, no chips.
-const NAME_Q = { id: 'name', q: 'Last thing: what is your name in this story?', h: 'Kept in Settings > Personal details, so next time it is filled in for you. Change it here to play someone else.', c: [], ph: 'Your name' };
+// Question 4: name, age and (adults only) romance, in one step of three boxes. Pre-filled from Settings > Personal details.
+const ME_Q = { id: 'me', me: true, q: 'About you', h: 'Your name and age shape the whole story: a 10-year-old and a 70-year-old get very different experiences. Filled in from Settings > Personal details; change them to play as someone else. Romance is only offered to adults.', c: [] };
+// Question 5: a quick description and go, or the deep set-up (photo and the detailed questions).
+// Two big buttons: Quick shows a box to describe the experience (Next then creates it); Deep moves straight on to the photo and the detailed
+// questions. The detailed questions are only counted ("Question 5 of 5") once Deep is chosen.
+const DEPTH_Q = { id: 'depth', depth: true, q: 'Quick start or deep set-up?', h: 'Pick how much you want to set up.', c: [], ph: 'e.g. A pirate adventure with my pet dragon, hunting for treasure on a volcano island' };
 function mePrefill() {   // answers filled in from Settings > Personal details
   // Gender and interest are free text: common words read naturally ("a man", "women"); anything else is used as written.
   const me = S().me || {}, out = {}, g = String(me.gender || '').trim(), i = String(me.interest || '').trim();
   const who = { male: 'a man', man: 'a man', m: 'a man', female: 'a woman', woman: 'a woman', f: 'a woman', 'non-binary': 'a non-binary person', nonbinary: 'a non-binary person' }[g.toLowerCase()] || (!g ? 'someone' : /^(a|an|the)\s/i.test(g) ? g : /\b(wo)?m[ae]n|person|guy|girl|boy|lady|dude|gal|bloke\b/i.test(g) ? 'a ' + g : 'someone who is ' + g);
   const what = { everyone: 'anyone who catches my eye', anyone: 'anyone who catches my eye', both: 'women and men' }[i.toLowerCase()] || i.toLowerCase();
   if (me.name) out.name = me.name;
+  if (me.born > 1900) out.age = String(new Date().getFullYear() - me.born);
   if (g || i) out.romance = 'I am ' + who + (who.startsWith('someone who') ? ' and' : ' who is') + ' interested in ' + (what || '...');
   return out;
 }
-const ROMANCE_Q = { id: 'romance', q: 'Romance: you are a ___ who is interested in ___.', h: 'Fill in the blanks in your own words, e.g. "a retired spy who is interested in the new neighbour" or "a nervous bard who is interested in women".', c: [], ph: 'I am a ... who is interested in ...' };
 // "Same cast, new story": a shorter questionnaire. The cast, world and the old answers below carry over (and are pre-filled).
 const LINK_Q = { id: 'link', q: 'How does the new story connect to the old one?', h: 'Same cast and world either way; this sets what they remember.', c: ['Sequel: it picks up after the last story', 'Years later', 'Fresh start: same cast, new story', 'Prequel: before it all began'] };
 const WHO2_Q = { id: 'who', q: 'Who are you this time?', h: 'Keep your character, play one of the returning cast, or someone new.', c: ['The same character as before', 'One of the returning characters', 'Someone new'] };
 const STORY_IDS = ['world', 'vibe', 'who', 'traits', 'where', 'hook', 'allies', 'threat', 'play', 'avoid'], SIM_IDS = ['world', 'where', 'goal', 'who', 'allies', 'avoid'];
 const simPick = () => /simulat/i.test(cur.answers.mode || '');
 const shortPick = () => !!cur.answers.time && !isNoPref(cur.answers.time) && minutesOf(cur.answers.time) <= 15;   // a short session was chosen
-const chipsOf = q => q.cs && shortPick() ? q.cs : q.c;   // short stories get the grounded option chips
+const quickPick = () => /^quick/i.test(cur.answers.depth || ''), deepPick = () => /^deep/i.test(cur.answers.depth || '');
+const ageNow = () => +cur.answers.age || 0, kidPick = () => ageNow() > 0 && ageNow() < 13, minorPick = () => ageNow() > 0 && ageNow() < 18;
+// children get their own chips; short stories get the grounded ones; under-18s never see romance options
+const chipsOf = q => (q.ck && kidPick() ? q.ck : q.cs && shortPick() ? q.cs : q.c).filter(c => !(minorPick() && /roman[ct]|love/i.test(c)));
 const NOPREF = '(no preference: you decide, surprise me)';
 const isNoPref = s => /^\(no preference/i.test(String(s || ''));
 let cur = { i: 0, answers: {}, extra: {}, rounds: {} };
-function wantsRomance() {
-  if (/no romance/i.test(cur.answers.avoid || '')) return false;
-  return /romance|romantic|love stor|flirt/i.test((cur.answers.world || '') + ' ' + (cur.answers.vibe || '')) || /\blove\b|romanc/i.test(cur.answers.feeling || '') || !!(cur.src && cur.prefRomance);
-}
-function curQs() {   // the list depends on the play mode you pick (and a new story with the same cast skips the world questions)
-  const sim = simPick(), head = [QBY.time, QBY.feeling, QBY.mode];
-  const qs = cur.src ? head.concat([LINK_Q, sim ? QBY.goal : QBY.hook, WHO2_Q], sim ? [] : [QBY.vibe, QBY.play], [QBY.avoid])
-    : head.concat([QBY.photo], (sim ? SIM_IDS : STORY_IDS).map(id => QBY[id]));
-  return qs.concat(wantsRomance() ? [ROMANCE_Q] : [], [NAME_Q]);
+function curQs() {   // the list depends on the play mode and set-up depth you pick (and a new story with the same cast skips the world questions)
+  const sim = simPick(), head = [QBY.time, QBY.feeling, QBY.mode, ME_Q];
+  if (cur.src) return head.concat([LINK_Q, sim ? QBY.goal : QBY.hook, WHO2_Q], sim ? [] : [QBY.vibe, QBY.play], [QBY.avoid]);
+  return head.concat([DEPTH_Q], deepPick() ? [QBY.photo].concat((sim ? SIM_IDS : STORY_IDS).map(id => QBY[id])) : []);
 }
 // Adventures made before answers had ids stored them by position.
 const OLD_IDS = ['world', 'vibe', 'who', 'traits', 'where', 'hook', 'allies', 'threat', 'play', 'avoid', 'length', 'romance'];
@@ -1587,7 +1624,7 @@ const MORE_ROUNDS = { feeling: 3 };   // feelings keep populating: up to 3 round
 const moreDue = id => (cur.rounds[id] || 0) < (MORE_ROUNDS[id] || 1);
 function armMore() {   // (re)start the wait; every interaction restarts it, so it only fires when the player seems stuck
   clearTimeout(moreTimer); const q = curQs()[cur.i];
-  if (!q || !moreDue(q.id) || ['time', 'mode', 'photo', 'length', 'romance', 'link', 'name'].includes(q.id) || (S().fake ? false : !S().key)) return;
+  if (!q || !moreDue(q.id) || ['time', 'mode', 'photo', 'length', 'link', 'me', 'depth', 'describe'].includes(q.id) || (S().fake ? false : !S().key)) return;
   moreTimer = setTimeout(() => moreOptions(q.id), q.id === 'feeling' ? 3500 : MORE_AFTER_MS);
 }
 async function moreOptions(id) {
@@ -1597,9 +1634,10 @@ async function moreOptions(id) {
   if (S().fake) { const d = (DEMO_MORE[id] || []).slice((cur.rounds[id] - 1) * 4, cur.rounds[id] * 4); cur.extra[id] = (cur.extra[id] || []).concat(d); addExtraChips(d); armMore(); return; }
   $('curMsg').textContent = 'Thinking of more options...';
   try {
-    const q = qs[i], prior = qs.slice(0, i).map(x => '- ' + x.q + ' ' + (cur.answers[x.id] || '(open)')).join('\n') || '(nothing yet)';
+    const q = qs[i], prior = qs.slice(0, i).map(x => '- ' + x.q + ' ' + (x.me ? meSummary() : cur.answers[x.id] || '(open)')).join('\n') || '(nothing yet)';
     const gp = (id === 'feeling' ? ' For this question the options must be FEELINGS or emotional experiences someone might want from an escape (1-4 words, e.g. "Cosy belonging", "Mischievous fun", "Quiet pride", "Bittersweet longing"), fitting the earlier answers.' : '') +
       (id === 'goal' ? ' For this question the options are things to DO in the world (2-6 words, e.g. "Learn a craft from a local", "Throw a party").' : '') + (id === 'play' ? ' For this question the options must be GAMEPLAY CATEGORIES (short, e.g. "Heist planning", "Social intrigue", "Chase scenes", "Survival", "Negotiation", "Mystery solving").' : '') +
+      (ageNow() ? ' The player is ' + ageNow() + ' years old: every option must suit and appeal to that age' + (kidPick() ? ' (a child: G-rated, playful, no romance, nothing frightening).' : minorPick() ? ' (a teenager: PG, no romance).' : '.') : '') +
       (shortPick() ? ' The player chose a SHORT story: keep options simple and grounded, set on Earth today or in a familiar period of history; avoid high fantasy, science fiction and invented worlds.' : '');
     const raw = await chat('options', [{ role: 'system', content: 'Output ONLY JSON: {"options":["6 new options"]}. Match the style of the EXISTING OPTIONS exactly: broad, high-level, generic categories of 1-4 words that work for any story (like "Noir detective", "Cozy", "A loyal sidekick", "A ticking clock"). Do NOT invent plot details, character names, place names or anything specific; stay at the same level of abstraction. They should fit the earlier answers in spirit and must not repeat the existing options.' + gp },
       { role: 'user', content: 'EARLIER ANSWERS:\n' + prior + '\n\nQUESTION: ' + q.q + ' (' + q.h + ')\nEXISTING OPTIONS: ' + chipsOf(q).concat(cur.extra[id] || []).join('; ') }]);
@@ -1614,8 +1652,14 @@ function curRender() {
   $('curStep').textContent = 'Question ' + (cur.i + 1) + ' of ' + n;
   $('curQ').textContent = q.q; $('curHint').textContent = q.h + (cur.fromPhoto && cur.fromPhoto.includes(q.id) ? ' (Filled in from your photo: change anything you like.)' : '');
   $('curPhoto').style.display = q.photo ? '' : 'none'; showPhoto();
+  const quick = q.depth && quickPick();
+  $('curMe').style.display = q.me ? '' : 'none'; $('curDepth').style.display = q.depth ? '' : 'none'; $('curSkip').style.display = q.me ? 'none' : '';
+  $('curA').style.display = q.me || (q.depth && !quick) ? 'none' : ''; $('curNext').style.display = q.depth && !quick ? 'none' : '';
+  $('depQuick').classList.toggle('primary', quick); $('depDeep').classList.toggle('primary', q.depth && deepPick());
+  if (q.depth) $('curHint').textContent = quick ? 'Describe it in a sentence or a paragraph, then press "Create my experience".' : q.h;
+  if (q.me) { $('meName').value = cur.answers.name || ''; $('meAge').value = cur.answers.age || ''; $('meRomance').value = cur.answers.romance || ''; meRomanceShow(); }
   $('curFinish').style.display = cur.photo && cur.photo.canvas && cur.i < n - 1 ? '' : 'none';
-  $('curA').value = cur.answers[q.id] || ''; $('curA').placeholder = q.ph || 'Type your own answer, or tap options above...';
+  $('curA').value = (q.depth ? cur.answers.describe : cur.answers[q.id]) || ''; $('curA').placeholder = q.ph || 'Type your own answer, or tap options above...';
   $('curChips').innerHTML = chipsOf(q).map(c => '<button class="chip" data-c="' + esc(c) + '">' + esc(c) + '</button>').join('');
   if (cur.extra[q.id]) addExtraChips(cur.extra[q.id]); else wireChips();
   $('curBack').disabled = cur.i === 0;
@@ -1624,18 +1668,28 @@ function curRender() {
 }
 function curChips() { const parts = $('curA').value.split(/,\s*/); $('curChips').querySelectorAll('.chip').forEach(b => b.classList.toggle('sel', parts.includes(b.dataset.c))); }
 $('curA').addEventListener('input', () => { curChips(); armMore(); });
-function curStore() { const q = curQs()[cur.i]; if (q) cur.answers[q.id] = $('curA').value.trim(); }
+function curStore() {
+  const q = curQs()[cur.i]; if (!q) return;
+  if (q.depth) { if (quickPick()) cur.answers.describe = $('curA').value.trim(); return; }
+  if (!q.me) { cur.answers[q.id] = $('curA').value.trim(); return; }
+  const n = +$('meAge').value; cur.answers.name = $('meName').value.trim(); cur.answers.age = n > 0 ? String(Math.round(n)) : '';
+  cur.answers.romance = minorPick() ? '' : $('meRomance').value.trim(); cur.answers.me = meSummary();
+}
+function meSummary() { const x = cur.answers; return [x.name && 'name ' + x.name, x.age && 'age ' + x.age, x.romance && 'romance: ' + x.romance].filter(Boolean).join('; ') || '(not given)'; }
+function meRomanceShow() { const n = +$('meAge').value; $('meRomanceRow').style.display = n > 0 && n < 18 ? 'none' : ''; }
+$('meAge').addEventListener('input', meRomanceShow);
+$('depQuick').onclick = () => { cur.answers.depth = 'Quick start'; curRender(); $('curA').focus(); };
+$('depDeep').onclick = () => { cur.answers.depth = 'Deep set-up'; delete cur.answers.describe; curAdvance(); };
 $('curBack').onclick = () => { curStore(); if (cur.i > 0) { cur.i--; curRender(); } };
-$('curSkip').onclick = () => { const q = curQs()[cur.i]; if (q.photo) { cur.photo = null; $('photoFile').value = ''; } $('curA').value = ''; cur.answers[q.id] = NOPREF; curAdvance(); };
+$('curSkip').onclick = () => { const q = curQs()[cur.i]; if (q.depth) { cur.answers.depth = 'Quick start'; cur.answers.describe = NOPREF; curAdvance(); return; } if (q.photo) { cur.photo = null; $('photoFile').value = ''; } $('curA').value = ''; cur.answers[q.id] = NOPREF; curAdvance(); };
 $('curNext').onclick = async () => {
   curStore(); const q = curQs()[cur.i];
   if (q.photo && cur.photo && !cur.photo.canvas && !(await readPhoto())) return;   // the photo is studied once, when you leave this step
   if (!cur.answers[q.id]) cur.answers[q.id] = q.photo && cur.photo ? '(photo uploaded)' : NOPREF; curAdvance();
 };
-$('curFinish').onclick = () => {   // the photo answered the rest; the romance question (when it applies) and your name are still asked
-  curStore(); const qs = curQs(), r = qs.findIndex(q => q.id === 'romance');
-  cur.i = r > cur.i ? r : qs.length - 1; curRender();
-};   // the photo answered the rest
+$('curFinish').onclick = () => {   // the photo answered the rest (your name, age and romance were asked before it)
+  curStore(); cur.i = curQs().length - 1; curAdvance();
+};
 $('curCancel').onclick = () => { $('curator').classList.remove('on'); renderStart(); $('start').classList.add('on'); };
 
 function busyBtn(b, text) {   // a pulsing, disabled button that says what is happening; call without text to restore it
@@ -1704,11 +1758,16 @@ async function readPhoto() {   // returns false if it failed (you stay on the ph
 async function curAdvance() {
   const qs = curQs();
   if (cur.i < qs.length - 1) { cur.i++; curRender(); return; }
-  const answers = qs.map(q => ({ id: q.id, q: q.q, a: cur.answers[q.id] || '(no preference)' }));
-  const nm = cur.answers.name; if (nm && !isNoPref(nm) && !(S().me || {}).name) { db.settings.me = Object.assign({}, S().me, { name: nm }); $('setMeName').value = nm; persist(); }   // remember your name for next time
+  const answers = qs.flatMap(q => q.depth ? [{ id: 'depth', q: 'Set-up', a: cur.answers.depth }, { id: 'describe', q: 'What you are looking for', a: cur.answers.describe }].filter(x => x.a)
+    : q.me ? [{ id: 'name', q: 'Your name', a: cur.answers.name }, { id: 'age', q: 'Your age', a: cur.answers.age }, { id: 'romance', q: 'Romance', a: cur.answers.romance }].filter(x => x.a)
+    : [{ id: q.id, q: q.q, a: cur.answers[q.id] || '(no preference)' }]);
+  { const me = Object.assign({}, S().me), nm = cur.answers.name, age = +cur.answers.age; let ch = false;   // remember your name and age for next time (never overwrites them)
+    if (nm && !me.name) { me.name = nm; $('setMeName').value = nm; ch = true; }
+    if (age && !me.born) { me.born = new Date().getFullYear() - age; $('setMeBorn').value = me.born; ch = true; }
+    if (ch) { db.settings.me = me; persist(); } }
   let suggested;
   if (cur.src) { const base = cur.src.replace(/ \d+$/, ''); let k = 2; while (db.adventures[base + ' ' + k]) k++; suggested = base + ' ' + k; }
-  else { const w = cur.answers.world || ''; suggested = (isNoPref(w) || !w ? 'Adventure' : w.split(',')[0]).replace(/[^\p{L}\p{N} ]/gu, '').trim().slice(0, 30) + ' ' + new Date().toISOString().slice(5, 10); }
+  else { const w = cur.answers.world || (cur.answers.describe || '').split(/[.!?]/)[0]; suggested = (isNoPref(w) || !w ? 'Adventure' : w.split(',')[0]).replace(/[^\p{L}\p{N} ]/gu, '').trim().slice(0, 30) + ' ' + new Date().toISOString().slice(5, 10); }
   let name = prompt('Name this experience:', suggested); if (!name) return; name = name.trim();
   if (db.adventures[name] && !confirm('"' + name + '" exists. Replace it?')) return;
   busyBtn($('curNext'), 'Building your world...'); $('curMsg').textContent = 'The curator is building your world. This takes a few seconds.';
@@ -1722,9 +1781,9 @@ async function curAdvance() {
 }
 function startSequel(name) {   // a new questionnaire for the same cast and world, pre-filled from the original answers
   const src = db.adventures[name]; if (!src) return;
-  const pre = {}; ['vibe', 'play', 'avoid', 'time', 'feeling', 'mode', 'goal', 'romance'].forEach(id => { const v = curatorAnswer(src, id); if (v) pre[id] = v; });
-  pre.who = WHO2_Q.c[0]; const mp = mePrefill(); if (mp.name && !pre.name) pre.name = mp.name; if (mp.romance && !pre.romance) pre.romance = mp.romance;
-  cur = { i: 0, answers: pre, extra: {}, rounds: {}, src: name, prefRomance: !!pre.romance };
+  const pre = {}; ['vibe', 'play', 'avoid', 'time', 'feeling', 'mode', 'goal', 'romance', 'name', 'age'].forEach(id => { const v = curatorAnswer(src, id); if (v) pre[id] = v; });
+  pre.who = WHO2_Q.c[0]; const mp = mePrefill(); ['name', 'age', 'romance'].forEach(k => { if (mp[k] && !pre[k]) pre[k] = mp[k]; });
+  cur = { i: 0, answers: pre, extra: {}, rounds: {}, src: name };
   $('start').classList.remove('on'); $('finale').classList.remove('on'); $('curator').classList.add('on'); $('curNext').disabled = false; curRender();
 }
 const CREATE_RULES = `You are a story architect for an immersive holodeck experience. From the player's questionnaire answers, output ONLY one JSON object:
@@ -1805,7 +1864,7 @@ function finalMessages(a) {
   const pl = a.transcript.filter(t => t.role === 'player').map((t, i) => (i + 1) + '. ' + t.text.slice(0, 300)).join('\n');
   const unit = timed(a) ? 'Minutes ' : 'Turns ';
   return [{ role: 'system', content: FINAL_RULES }, { role: 'user', content: 'BIBLE:\n' + a.bible + '\n\nFEELING TO ACHIEVE: ' + feelingOf(a) + '\nPLAY MODE: ' + (isSim(a) ? "experience simulator (no plot)\nPLAYER'S GOAL: " + goalOf(a) + '\nGOAL PROGRESS: ' + (a.goalProgress || '(not recorded)') : 'curated story') +
-    (timed(a) ? '\nSESSION: ' + a.minutes + ' minutes, ' + playerTurns(a) + ' player turns' : '') + '\nFEELING READINGS DURING PLAY (0-10, oldest first): ' + ((a.moodLog || []).join(', ') || '(none)') +
+    (timed(a) ? '\nSESSION: ' + a.minutes + ' minutes, ' + playerTurns(a) + ' player turns' : '') + (a.age ? "\nPLAYER'S AGE: " + a.age + ' (write the player comment for a reader of this age, and judge them as a ' + a.age + '-year-old)' : '') + '\nFEELING READINGS DURING PLAY (0-10, oldest first): ' + ((a.moodLog || []).join(', ') || '(none)') +
     (isSim(a) ? '' : '\n\nSECRET ROADMAP (the player never saw this):\n' + (a.roadmap || []).map(r => '- ' + unit + r.from + '-' + r.to + ': ' + r.goal).join('\n')) +
     '\n\nCHAPTER SUMMARIES:\n' + ((a.chunks || []).map(c => '- ' + c.text).join('\n') || '(none)') + '\n\nKEY EVENTS:\n' + a.events.slice(-40).join('\n') +
     '\n\nEVERY PLAYER ACTION (in order):\n' + pl + '\n\nLAST EXCHANGES:\n' + a.transcript.slice(-6).map(t => t.role + ': ' + t.text).join('\n\n') }];
@@ -1849,16 +1908,16 @@ async function createAdventure(name, answers, cats, srcName, photo) {
   const txt = answers.filter(x => x.id !== 'photo').map((x, i) => (i + 1) + '. ' + x.q + '\n   ' + x.a).join('\n');
   const g = id => { const v = (answers.find(x => x.id === id) || {}).a || ''; return isNoPref(v) ? '' : v; };
   const M = minutesOf(g('time')); a.minutes = M; a.elapsed = 0; a.mode = /simulat/i.test(g('mode')) ? 'sim' : 'story';
-  a.feeling = g('feeling') || 'Awe and Wonder'; { const v = romanceVoice(g('romance')); if (v) a.ttsVoice = v; } if (isSim(a)) a.goal = g('goal') || 'Explore and enjoy the place';
+  a.age = +g('age') || 0; a.feeling = g('feeling') || 'Awe and Wonder'; { const v = a.age && a.age < 18 ? '' : romanceVoice(g('romance')); if (v) a.ttsVoice = v; } if (isSim(a)) a.goal = g('goal') || 'Explore and enjoy the place';
   if (photo) a.photo = { thumb: photo.thumb, canvas: photo.canvas, place: photo.place, era: photo.era, caption: photo.caption || '' };
   const sim = isSim(a), est = Math.max(2, Math.round(M * 60 / SEC_PER_TURN));
   let made = null;
   if (!S().fake && S().key) {
     try {
-      const raw = await chat('gm', [{ role: 'system', content: CREATE_RULES + (M <= 15 ? '\n' + SHORT_CREATE : '') + (sim ? '\n' + SIM_CREATE : '') + (photo ? '\n' + PHOTO_CREATE : '') + (src ? '\n' + SEQUEL_RULES : '') + '\n' + namingBrief(name) },
+      const raw = await chat('gm', [{ role: 'system', content: CREATE_RULES + (a.age ? '\n' + ageRules(a) : '') + (M <= 15 ? '\n' + SHORT_CREATE : '') + (sim ? '\n' + SIM_CREATE : '') + (photo ? '\n' + PHOTO_CREATE : '') + (src ? '\n' + SEQUEL_RULES : '') + '\n' + namingBrief(name) },
         { role: 'user', content: (src ? sourceWorld(src, srcName) + '\n\nNEW QUESTIONNAIRE:\n' : '') + txt + (photo ? '\n\nPHOTO CANVAS (place: ' + photo.place + '; time: ' + photo.era + (photo.caption ? '; caption: ' + photo.caption : '') + '):\n' + photo.canvas +
           '\nPEOPLE IN THE PHOTO:\n' + (photo.people || []).map(p => '- ' + p.label + ': ' + p.desc).join('\n') : '') +
-          playerBrief(g('name')) + '\n\nFEELING TO ACHIEVE: ' + a.feeling + '\nPLAY MODE: ' + (sim ? 'experience simulator (no plot)' : 'curated story') + (sim ? "\nPLAYER'S GOAL: " + a.goal : '') + '\nM (session length in minutes) = ' + M + ' (roughly ' + est + ' player replies)' }]);
+          playerBrief(g('name'), a.age) + '\n\nFEELING TO ACHIEVE: ' + a.feeling + '\nPLAY MODE: ' + (sim ? 'experience simulator (no plot)' : 'curated story') + (sim ? "\nPLAYER'S GOAL: " + a.goal : '') + '\nM (session length in minutes) = ' + M + ' (roughly ' + est + ' player replies)' }]);
       made = parseJson(raw);
     } catch (e) { console.warn('curator generation failed, using answers directly', e); }
   }
@@ -1883,8 +1942,8 @@ async function createAdventure(name, answers, cats, srcName, photo) {
     a.bible = '# Story Bible\n\n' + stripWishes(src.bible).replace(/^#[^\n]*\n+/, '') + '\n\n**New story:** ' + g('link') + '. ' + g('hook') + '.';
     if (src.gm) a.gm = structuredClone(src.gm);
   } else {
-    const L = (k, v) => '\n\n**' + k + ':** ' + v;
-    a.bible = '# Story Bible' + L('Premise', (g('world') || 'Open') + (g('vibe') ? ' · ' + g('vibe') : '')) + L('Player character', g('who') + (g('traits') ? '. ' + g('traits') : '')) + L('Setting', g('where') || (photo ? photo.place + ', ' + photo.era : '')) +
+    const L = (k, v) => !String(v || '').trim() ? '' : '\n\n**' + k + ':** ' + v;
+    a.bible = '# Story Bible' + (g('describe') ? L('What you asked for', g('describe')) : '') + L('Premise', (g('world') || 'Open') + (g('vibe') ? ' · ' + g('vibe') : '')) + L('Player character', g('who') + (g('traits') ? '. ' + g('traits') : '')) + L('Setting', g('where') || (photo ? photo.place + ', ' + photo.era : '')) +
       (sim ? '' : L('Central hook', g('hook')) + L('Main threat', g('threat')) + L('Style of play', g('play'))) + L('Company', g('allies')) + (g('romance') ? L('Romance', g('romance')) : '');
   }
   if (!Object.values(a.lore).some(e => e.isPlayer)) addPlayerLore(a, g('name') || 'You', [g('who'), g('traits'), g('romance')].filter(Boolean).join('. ') || 'The player character.');
@@ -1899,8 +1958,12 @@ function romanceVoice(t) {
   const fem = /\b(women|woman|females?|girls?|ladies|lady|her|she|wife|girlfriend)\b/.test(w), masc = /\b(men|man|males?|guys?|boys?|him|he|husband|boyfriend)\b/.test(w);
   return fem && !masc ? 'Sulafat' : masc && !fem ? 'Charon' : '';
 }
-function playerBrief(name) {   // the player character's name, plus Settings > Personal details as defaults the answers can override
-  const me = S().me || {}, age = me.born > 1900 ? new Date().getFullYear() - me.born : 0, bits = [me.gender && 'gender: ' + me.gender, me.interest && 'romantically interested in: ' + me.interest, age && 'about ' + age + ' years old (born ' + me.born + '; useful for nostalgia and era details)'].filter(Boolean);
+function playerBrief(name, age) {   // the player character's name and age, plus Settings > Personal details as defaults the answers can override
+  // Someone else playing on this browser (a different name, e.g. your child) does not inherit your gender or romantic interest.
+  const me = S().me || {}, own = !name || !me.name || name.toLowerCase() === me.name.toLowerCase();
+  age = age || (own && me.born > 1900 ? new Date().getFullYear() - me.born : 0);
+  const bits = [own && me.gender && 'gender: ' + me.gender, own && me.interest && !(age && age < 18) && 'romantically interested in: ' + me.interest,
+    age && age + ' years old (born about ' + (new Date().getFullYear() - age) + '; pitch the story, its words and its references to that age)'].filter(Boolean);
   return (name ? "\n\nPLAYER CHARACTER'S NAME: " + name + ' (use exactly; never invent a different name for the player)' : '') + (bits.length ? '\nABOUT THE REAL PLAYER (defaults; the answers above win where they differ): ' + bits.join('; ') : '');
 }
 function addPlayerLore(a, name, desc) {   // the main character's own lore entry; always listed first
