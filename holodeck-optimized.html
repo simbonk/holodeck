@@ -1121,7 +1121,11 @@ async function recap() {
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const TTS = 'speechSynthesis' in window;
 const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);   // iPadOS reports itself as a Mac
-const FALLBACK_VOICE = 'Microsoft Ana Online (Natural)';   // Edge's names look like "Microsoft Ana Online (Natural) - English (United States)"
+// Edge's best storytelling voices, best first (names look like "Microsoft Ava Online (Natural) - English (United States)").
+// Ana is a child's voice, so it is never picked automatically. A story whose narrator is male (Charon) prefers the male list.
+const EDGE_FEMALE = ['AvaMultilingual', 'Ava', 'EmmaMultilingual', 'Emma', 'Jenny', 'Aria', 'Michelle', 'Sonia', 'Libby', 'Natasha'];
+const EDGE_MALE = ['AndrewMultilingual', 'Andrew', 'BrianMultilingual', 'Brian', 'Guy', 'Christopher', 'Eric', 'Ryan', 'William'];
+const MALE_NARRATORS = /^(Charon|Achird|Algenib|Algieba|Alnilam|Enceladus|Fenrir|Iapetus|Orus|Puck|Rasalgethi|Sadachbia|Sadaltager|Schedar|Umbriel|Zubenelgenubi)$/;
 const SPEECH_LANG = /^en/i.test(navigator.language || '') ? navigator.language : 'en-US';   // for speech recognition
 // On a computer, browser voices vary wildly, so they are scored (natural/online > Google > the rest; joke voices last) and the best wins.
 // On iPhone/iPad the app does NOT pick a voice: Safari lists voices it cannot actually use (including downloaded Enhanced/Premium ones),
@@ -1131,7 +1135,12 @@ function voiceScore(v) {
   if (!/^en/i.test(v.lang)) return -1;
   if (JOKE_VOICE.test(v.name) || /eloquence/i.test(v.voiceURI || '')) return 0;
   const id = v.name + ' ' + (v.voiceURI || ''); let s = 10;
-  if (v.name.startsWith(FALLBACK_VOICE)) s += 100;
+  const who = (v.name.match(/^Microsoft (\w+) Online/) || [])[1];
+  if (who === 'Ana') s -= 40;
+  else if (who) {
+    const male = MALE_NARRATORS.test((A() && A().ttsVoice) || S().ttsVoice || DEFAULT_TTS_VOICE), lists = male ? [EDGE_MALE, EDGE_FEMALE] : [EDGE_FEMALE, EDGE_MALE];
+    lists.forEach((l, k) => { const i = l.indexOf(who); if (i >= 0) s += (k ? 60 : 100) - i * 2; });
+  }
   if (/natural|online|neural/i.test(id)) s += 45; else if (/^Google /.test(v.name)) s += 30;
   if (/-US$/i.test(v.lang.replace('_', '-'))) s += 3;
   return s;
