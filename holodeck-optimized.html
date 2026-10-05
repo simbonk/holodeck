@@ -1203,6 +1203,7 @@ const player = new Audio(); player.setAttribute('playsinline', ''); player.prelo
 let audioUnlocked = false, blockedPlay = null, silentUrl = null, speechPrimed = false;
 function unlockAudio(e) {
   ensureAudio();   // the AudioContext (ambient sound, blips) needs a tap too
+  if (IOS && !fxUnlocked) { fxUnlocked = true; silentUrl = silentUrl || URL.createObjectURL(wavFromPcm(new Uint8Array(4800), 24000)); [ambEl, sfxEl].forEach(el => { if (el.paused) { el.src = silentUrl; el.play().catch(() => {}); } }); }   // so the thinking sound and beeps may play later
   if (blockedPlay) { const f = blockedPlay; blockedPlay = null; f(); return; }   // narration was refused: this tap plays it
   if (handsActive || (e && e.target && e.target.closest && e.target.closest('#micBtn'))) return;   // never disturb the microphone
   if (!audioUnlocked && player.paused) {
@@ -1420,10 +1421,8 @@ function calmPad(c) {
   master.gain.setValueAtTime(0, c.currentTime); master.gain.linearRampToValueAtTime(0.5, c.currentTime + 2);
   return { master, nodes };
 }
-function startAmbient() {
-  if (amb) return; const kind = ambientKind(); if (kind === 'off') return;
-  const c = ensureAudio(); if (!c) return;
-  if (kind === 'calm') { amb = calmPad(c); return; }
+function ambientGraph(c, kind) {   // builds the sound on any audio context: the live one, or an offline one that renders a clip for iPhone
+  if (kind === 'calm') return calmPad(c);
   const len = c.sampleRate * 4, buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0); let last = 0;
   for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; if (kind === 'rain') d[i] = w; else { last = (last + 0.02 * w) / 1.02; d[i] = last * 3.5; } }
   const src = c.createBufferSource(); src.buffer = buf; src.loop = true;
@@ -1433,18 +1432,54 @@ function startAmbient() {
   else { filt.type = 'bandpass'; filt.frequency.value = 400; filt.Q.value = 0.8; lfo.frequency.value = 0.07; swell.gain.value = 0.6; lg.gain.value = 250; lfo.connect(lg); lg.connect(filt.frequency); }
   src.connect(filt); filt.connect(swell); swell.connect(master); master.connect(c.destination);
   master.gain.setValueAtTime(0, c.currentTime); master.gain.linearRampToValueAtTime(0.5, c.currentTime + 1.5);
-  src.start(); lfo.start(); amb = { master, nodes: [src, lfo] };
+  src.start(); lfo.start(); return { master, nodes: [src, lfo] };
+}
+// iPhone/iPad: Web Audio is muted by Silent Mode and can stay asleep after the screen locks, while <audio> elements keep playing (the
+// narrator uses one). So on iOS the thinking sound and the beeps are rendered once into WAV clips and played through <audio> elements.
+const ambEl = new Audio(), sfxEl = new Audio(); [ambEl, sfxEl].forEach(el => { el.setAttribute('playsinline', ''); el.preload = 'auto'; }); ambEl.loop = true;
+let fxUnlocked = false;
+const clipCache = {};
+function renderClip(key, secs, build, loop) {   // -> Promise of a WAV object URL; a loop gets its end cross-faded into its start, so it repeats seamlessly
+  if (clipCache[key]) return clipCache[key];
+  const OC = window.OfflineAudioContext || window.webkitOfflineAudioContext; if (!OC) return Promise.reject(new Error('No offline audio here'));
+  const rate = 24000, pre = loop ? 3 : 0, c = new OC(1, Math.ceil(rate * (secs + pre)), rate); build(c);
+  return clipCache[key] = new Promise((res, rej) => { c.oncomplete = e => res(e.renderedBuffer); const p = c.startRendering(); if (p && p.then) p.then(res, rej); }).then(b => {
+    let d = b.getChannelData(0);
+    if (loop) { const st = pre * rate, f = rate, out = d.slice(st); for (let i = 0; i < f; i++) { const t = i / f, j = out.length - f + i; out[j] = out[j] * (1 - t) + d[st - f + i] * t; } d = out; }
+    const pcm = new Int16Array(d.length); for (let i = 0; i < d.length; i++) pcm[i] = Math.max(-1, Math.min(1, d[i])) * 32767;
+    return URL.createObjectURL(wavFromPcm(new Uint8Array(pcm.buffer), rate));
+  });
+}
+function startAmbient() {
+  if (amb) return; const kind = ambientKind(); if (kind === 'off') return;
+  if (IOS) {
+    const me = amb = { el: true };
+    renderClip('amb-' + kind, 30, c => ambientGraph(c, kind), true).then(url => { if (amb !== me) return; ambEl.src = url; return ambEl.play(); }).catch(e => console.warn('thinking sound', e));
+    return;
+  }
+  const c = ensureAudio(); if (!c) return;
+  amb = ambientGraph(c, kind);
 }
 function stopAmbient() {
+  if (amb && amb.el) { amb = null; ambEl.pause(); return; }
   if (!amb || !actx) return; const m = amb; amb = null;
   try { m.master.gain.cancelScheduledValues(actx.currentTime); m.master.gain.setValueAtTime(m.master.gain.value, actx.currentTime); m.master.gain.linearRampToValueAtTime(0, actx.currentTime + 1.2); } catch (e) {}
   setTimeout(() => m.nodes.forEach(n => { try { n.stop(); } catch (e) {} }), 1400);
 }
-function blip(freq) {   // short soft tone so you can hear (eyes closed) that the microphone is open or your message was sent
-  if (!handsActive) return; const c = ensureAudio(); if (!c) return;
-  const o = c.createOscillator(), g = c.createGain(); o.frequency.value = freq; g.gain.setValueAtTime(0.0001, c.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.12, c.currentTime + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 0.35);
-  o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + 0.4);
+// Short cues so you can hear (eyes closed) what is happening: 'listen' = your turn to talk, 'ack' = "Make it so" heard (a starship
+// computer's acknowledging chirp), 'sent' = a typed message sent. Each is a list of [frequency, start, length] tones.
+const CUES = { listen: [[660, 0, 0.35]], sent: [[440, 0, 0.35]], ack: [[1175, 0, 0.07], [1568, 0.085, 0.07], [2093, 0.17, 0.16]] };
+function cueGraph(c, name, t0) {
+  CUES[name].forEach(([f, st, len]) => {
+    const o = c.createOscillator(), g = c.createGain(), t = t0 + st; o.type = name === 'ack' ? 'triangle' : 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(name === 'ack' ? 0.09 : 0.12, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + len + 0.05);
+  });
+}
+function blip(name) {
+  if (!handsActive) return;
+  if (IOS) { renderClip('cue-' + name, 0.5, c => cueGraph(c, name, 0)).then(url => { sfxEl.src = url; return sfxEl.play(); }).catch(e => console.warn('cue', e)); return; }
+  const c = ensureAudio(); if (c) cueGraph(c, name, c.currentTime);
 }
 // The send phrase is "Make it so" (Captain Picard). It only counts at the very END of what you said, and only after a short pause, so a sentence like "make it so the door opens" does not send. "End dictation" still works as a backup.
 const SEND_PHRASE = 'make it so';
@@ -1452,7 +1487,7 @@ const END_RE = /(^|\s)(make it so|end (of )?dictation)[.,!?\s]*$/i, hasEnd = s =
 let endTimer = null;
 // Hands-free: the microphone stays on until you tap the button again. Speech is ignored while the story is being prepared or the narrator is talking
 // (so it never hears itself), and only the words "make it so" send the message. Pauses never send.
-let recRun = false, lastMuted = false, voiceErr = '', quietErr = false;
+let recRun = false, lastMuted = false, voiceErr = '', quietErr = false, recSince = 0, recIdle = 0, recHeard = false;   // recSince: when the current session was started or aborted without ending yet
 const narrating = () => !!activeGemini || (TTS && speechSynthesis.speaking && Date.now() < talkUntil);   // see talkUntil: never stuck "talking"
 const micMuted = () => busy || narrating();
 // The send phrase is drawn letter by letter so each one can glow and bob in a wave.
@@ -1472,8 +1507,13 @@ setInterval(() => {
   const m = micMuted();
   if (m !== lastMuted) {
     lastMuted = m; voiceErr = '';   // any stale speech error is cleared whenever the muted state changes
-    if (!m) { dictBuf = ''; $('input').value = ''; try { rec.abort(); } catch (e) {} blip(660); }   // fresh session so no tail of the narrator's voice is picked up
+    if (!m) { dictBuf = ''; $('input').value = ''; recSince = Date.now(); try { rec.abort(); } catch (e) {} blip('listen'); }   // fresh session so no tail of the narrator's voice is picked up
   }
+  // Watchdog (iPhone): Safari sometimes never ends an aborted session or never starts a new one, which left the mic dead after a few turns.
+  // A session that has not started (or ended after an abort) within 4 seconds is dropped and replaced; a mic that sits idle is restarted.
+  if (!m && recRun && recSince && Date.now() - recSince > 4000) { console.warn('speech session stuck; restarting'); const old = rec; rec = null; recRun = false; recSince = 0; try { old && old.abort(); } catch (e) {} listen(); }
+  else if (!m && !recRun && document.visibilityState === 'visible') { recIdle = recIdle || Date.now(); if (Date.now() - recIdle > 3000) { recIdle = 0; listen(); } }
+  else recIdle = 0;
   $('micBtn').classList.toggle('rec', recRun && !m);
   const fileNote = location.protocol === 'file:' ? ' (Opened as a file, so the browser asks for the microphone again on every restart. Serve the folder from a local web server instead; see the README.)' : '';
   if (voiceErr && !m) voiceStatus(voiceErr, true);
@@ -1485,11 +1525,12 @@ function listen() {
   if (!handsActive || recRun || document.visibilityState === 'hidden') return;   // a hidden page restarts it when it comes back
   const me = rec = new SR(); rec.lang = SPEECH_LANG; rec.interimResults = true; rec.continuous = true;   // `me`: a session replaced after the screen woke up is ignored when it finally ends
   let finalText = dictBuf ? dictBuf + ' ' : '', dictDone = false;
-  recRun = true;
-  rec.onstart = () => { micUI(true); };
+  recRun = true; recSince = Date.now();
+  rec.onstart = () => { if (rec === me) recSince = 0; micUI(true); };
+  rec.onaudiostart = () => { if (rec === me) recSince = 0; };
   rec.onresult = e => {
     if (dictDone || micMuted()) return;
-    voiceErr = '';
+    voiceErr = ''; recHeard = true;
     let interim = '';
     for (let i = e.resultIndex; i < e.results.length; i++) { const r = e.results[i]; if (r.isFinal) finalText += r[0].transcript + ' '; else interim += r[0].transcript; }
     const full = (finalText + interim).trim();
@@ -1505,6 +1546,7 @@ function listen() {
     if (rec !== me) return;
     if ((e.error === 'not-allowed' || e.error === 'service-not-allowed') && Date.now() - backAt < 8000) { handsActive = false; setHandsUI(); voiceStatus('The microphone switched off while the screen was asleep. Tap Hands-free to turn it back on.', true); }   // iPhone: a restart after sleep can need a tap
     else if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { handsActive = false; voiceErr = ''; setHandsUI(); alert('Microphone access was blocked. Allow it in the browser address bar (lock icon) and tap Hands-free again.'); }
+    else if (e.error === 'audio-capture' && recHeard) quietErr = true;   // iPhone: the mic was briefly taken (e.g. by playback) after it had worked; just retry
     else if (e.error === 'audio-capture') { handsActive = false; setHandsUI(); alert('No microphone was found.'); }
     else if (micMuted()) quietErr = true;   // errors while the narrator talks or the story loads are expected (Edge drops the speech service while audio plays): retry quietly, show nothing
     else if (e.error === 'network') voiceErr = 'The browser speech service could not be reached (network). Retrying...';
@@ -1512,7 +1554,7 @@ function listen() {
   };
   rec.onend = () => {
     if (rec !== me) return;
-    recRun = false; micUI(false);
+    recRun = false; recSince = 0; micUI(false);
     if (endTimer) { clearTimeout(endTimer); endTimer = null; dictDone = true; }   // the session ended while the send phrase was pending: treat it as sent
     const t = $('input').value.trim();
     if (dictDone) { dictBuf = ''; if (t && !busy) { dictated = true; send(); } }
@@ -1543,7 +1585,7 @@ $('micBtn').onclick = () => {
   if (handsActive) { handsActive = false; dictBuf = ''; try { rec.abort(); } catch (e) {} setHandsUI(); keepAwake(false); return; }
   if (!SR) { alert('Speech recognition is not supported in this browser. Chrome, Edge and Safari support it.'); return; }
   if (!S().speak) { db.settings.speak = true; $('setSpeak').checked = true; persist(); }   // hands-free needs the story read aloud
-  handsActive = true; voiceErr = ''; lastMuted = micMuted(); setHandsUI(); blip(660); keepAwake(true); listen();
+  handsActive = true; voiceErr = ''; recHeard = false; lastMuted = micMuted(); setHandsUI(); blip('listen'); keepAwake(true); listen();
 };
 
 // ---------------- Experience Curator ----------------
@@ -2158,7 +2200,7 @@ async function send() {
   if (!text && !first) return;
   busy = true; $('send').disabled = true; showTab('story'); dictBuf = '';
   usageBase = Object.assign(JSON.parse(JSON.stringify(A().usage || {})), { __adv: db.current });
-  stopSpeech(); blip(440); startAmbient();
+  stopSpeech(); blip(wasDictated ? 'ack' : 'sent'); startAmbient();
   if (wasDictated && text && S().cleanDict !== false) text = await cleanDictation(text);
   const hidden = first && !text;
   if (hidden) text = isSim(A()) ? 'Begin the experience. Write an immersive opening of 150-250 words that places the player right inside the world, already there, painted richly with all the senses, delivering the FEELING TO ACHIEVE from the first lines and making their goal feel within reach. At most one person with a distinct voice and a touch of gentle humour. No threat, no hook, no mystery. Do not end with a list of options.'
