@@ -187,7 +187,7 @@
           <label>Narrator voice</label>
           <div class="row"><select id="setTtsVoice" style="width:100%"></select></div>
           <div class="row"><input id="setTtsVoiceCustom" placeholder="Custom voice ID" style="display:none"></div>
-          <label>Speech model</label>
+          <label>Speech model (the lite one costs about a third less and has its own daily limit; the game switches to it by itself if the main one runs out)</label>
           <div class="row"><select id="setTtsModel" style="width:100%"></select></div>
           <label>Voice requests per reply (your plan limits voice requests per day). One request makes the quota last longest, but the voice starts only once the whole reply is written; more requests start sooner.</label>
           <div class="row"><select id="setTtsChunk" style="width:100%"><option value="one">Fewest: 1 request per reply (default; starts when the reply is complete)</option><option value="two">2 requests per reply (starts sooner)</option><option value="2000">About 3 requests per reply (quick start)</option><option value="700">About 4 requests per reply (smoothest)</option></select></div>
@@ -328,7 +328,7 @@ const $ = id => document.getElementById(id);
 const KEY = 'holodeck.v2';
 // Google Gemini through its OpenAI-compatible endpoint. "Test connection" lists the models a key can really use and swaps in available ones if a default is missing.
 const GEMINI = { base: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-3.1-pro-preview', cheap: 'gemini-3.8-flash', embed: 'gemini-embedding-2-preview',
-  models: ['gemini-3.1-pro-preview', 'gemini-3.8-flash'], ttsModel: 'gemini-3.8-flash-tts', prices: '2,12,0.5,3,10',
+  models: ['gemini-3.1-pro-preview', 'gemini-3.8-flash'], ttsModel: 'gemini-3.8-flash-tts', ttsLite: 'gemini-3.8-flash-lite-tts', cheapLite: 'gemini-3.1-flash-lite', prices: '2,12,0.5,3,10',
   cacheRate: 0.25 };   // cached input is billed at about this fraction of the normal input price (an estimate)
 const RETIRED = { model: ['gemini-2.5-pro'], cheap: ['gemini-2.5-flash'], embed: ['gemini-embedding-001'] };   // saved values matching these are upgraded to the new defaults
 const BIBLE_EVERY = 10;
@@ -1193,7 +1193,7 @@ const GEMINI_HOST = 'https://generativelanguage.googleapis.com/v1beta';
 const DEFAULT_TTS_STYLE = 'Narrate like a gifted audiobook reader telling an immersive adventure story: warm, expressive and unhurried, with natural pauses. Bring dialogue to life with subtle shifts in tone and pace, and let moments of tension, wonder and humour show in your voice.';
 const GEMINI_VOICES = ['Achernar','Achird','Algenib','Algieba','Alnilam','Aoede','Autonoe','Callirrhoe','Charon','Despina','Enceladus','Erinome','Fenrir','Gacrux','Iapetus','Kore','Laomedeia','Leda','Orus','Pulcherrima','Puck','Rasalgethi','Sadachbia','Sadaltager','Schedar','Sulafat','Umbriel','Vindemiatrix','Zephyr','Zubenelgenubi'];
 const DEFAULT_TTS_VOICE = 'Sulafat';
-let activeGemini = null, geminiWarned = false, geminiBlocked = false;
+let activeGemini = null, geminiWarned = false, geminiBlocked = false, ttsLiteNow = false;   // ttsLiteNow: the chosen voice model hit its daily quota, so use the lite one until reload or Test voice
 const useGemini = () => (S().ttsEngine || 'gemini') === 'gemini' && !!S().key && !S().fake && !geminiBlocked;   // geminiBlocked: quota hit (HTTP 429), so stay on the browser voice until reload or Test voice
 function stopSpeech() { blockedPlay = null; talkUntil = 0; if (TTS) speechSynthesis.cancel(); if (activeGemini) { activeGemini.stop(); activeGemini = null; } }
 // iPhone/iPad Safari only lets a page start sound from a tap. A fresh new Audio() per clip, played seconds later when the API answers,
@@ -1228,7 +1228,7 @@ function wavFromPcm(pcm, rate) {   // raw 16-bit mono PCM -> WAV, in case the AP
 }
 const ttsCache = new Map();   // voice+model+style+text -> audio URL; replaying a message costs nothing while the page stays open
 async function geminiTTS(text) {
-  const voice = (A() && A().ttsVoice) || S().ttsVoice || DEFAULT_TTS_VOICE, model = S().ttsModel || GEMINI.ttsModel, style = S().ttsStyle || DEFAULT_TTS_STYLE, ck = [voice, model, style, text].join('\u0001');
+  const chosen = S().ttsModel || GEMINI.ttsModel, voice = (A() && A().ttsVoice) || S().ttsVoice || DEFAULT_TTS_VOICE, model = ttsLiteNow ? GEMINI.ttsLite : chosen, style = S().ttsStyle || DEFAULT_TTS_STYLE, ck = [voice, model, style, text].join('\u0001');
   if (ttsCache.has(ck)) return ttsCache.get(ck);
   const body = {
     model,
@@ -1237,7 +1237,12 @@ async function geminiTTS(text) {
     generation_config: { speech_config: [{ voice }] }
   };
   const r = await netFetch(GEMINI_HOST + '/interactions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': S().key }, body: JSON.stringify(body) });
-  if (!r.ok) { const body = (await r.text()).slice(0, 200); if (r.status === 429) geminiBlocked = true; throw new Error('Gemini voice HTTP ' + r.status + ': ' + body); }
+  if (!r.ok) {
+    const body = (await r.text()).slice(0, 200);
+    // Quotas are per model, so when the chosen voice model runs out, switch to the lite one (its own daily allowance) before giving up on Gemini.
+    if (r.status === 429 && model !== GEMINI.ttsLite) { ttsLiteNow = true; console.warn('Voice quota hit on ' + model + '; switching to ' + GEMINI.ttsLite);
+      if (A()) addMsg('sys', 'The main Gemini voice has used up its allowance for now, so the lighter voice model (' + GEMINI.ttsLite + ') takes over.'); return geminiTTS(text); }
+    if (r.status === 429) geminiBlocked = true; throw new Error('Gemini voice HTTP ' + r.status + ': ' + body); }
   const j = await r.json(); let data = null;
   (j.steps || []).forEach(s => (s.content || []).forEach(c => { if (c.type === 'audio' && c.data) data = c.data; }));
   if (!data) throw new Error('Gemini voice returned no audio');
@@ -1366,7 +1371,7 @@ function testDeviceVoice(report) {   // speaks TEST_LINE with the device voice a
 }
 $('testDevice').onclick = () => { stopSpeech(); voiceSuspect = false; testDeviceVoice(t => diag([t])); };   // runs inside your tap, which Safari always allows
 $('testVoice').onclick = async () => {
-  autoSave(); stopSpeech(); geminiWarned = false; geminiBlocked = false; voiceSuspect = false;
+  autoSave(); stopSpeech(); geminiWarned = false; geminiBlocked = false; ttsLiteNow = false; voiceSuspect = false;
   const lines = [], report = (i, t) => { lines[i] = t; diag(lines); };
   if (TTS) { try { const p = new SpeechSynthesisUtterance(' '); p.volume = 0; speechSynthesis.speak(p); } catch (e) {} }   // inside this tap, so the device voice may speak after the Gemini attempt
   if (S().fake || !S().key || S().ttsEngine === 'browser') { report(0, 'Gemini voice: ' + (S().ttsEngine === 'browser' ? 'switched off in Settings' : 'no API key (or offline test mode)') + ', so only the device voice is tested.'); testDeviceVoice(t => report(1, t)); return; }
@@ -2204,9 +2209,9 @@ function wireCombo(id) {
 ['setModel', 'setCheap', 'setEmbed', 'setTtsModel'].forEach(wireCombo);
 function fillModels() {
   fillCombo('setModel', [GEMINI.model, ...GEMINI.models], S().model || GEMINI.model);
-  fillCombo('setCheap', [GEMINI.cheap, ...GEMINI.models], S().cheap || GEMINI.cheap);
+  fillCombo('setCheap', [GEMINI.cheap, ...GEMINI.models, GEMINI.cheapLite], S().cheap || GEMINI.cheap);
   fillCombo('setEmbed', [GEMINI.embed], embedModel(), true);
-  fillCombo('setTtsModel', [GEMINI.ttsModel], S().ttsModel || GEMINI.ttsModel);
+  fillCombo('setTtsModel', [GEMINI.ttsModel, GEMINI.ttsLite], S().ttsModel || GEMINI.ttsModel);
 }
 $('setTtsVoice').innerHTML = GEMINI_VOICES.map(v => '<option>' + v + '</option>').join('') + '<option value="__custom">Custom voice ID...</option>';
 function syncTtsVoiceUI() { $('setTtsVoiceCustom').style.display = $('setTtsVoice').value === '__custom' ? '' : 'none'; }
