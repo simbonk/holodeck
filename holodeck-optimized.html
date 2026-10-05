@@ -187,10 +187,10 @@
           <label>Narrator voice</label>
           <div class="row"><select id="setTtsVoice" style="width:100%"></select></div>
           <div class="row"><input id="setTtsVoiceCustom" placeholder="Custom voice ID" style="display:none"></div>
-          <label>Speech model (the lite one costs about a third less and has its own daily limit; the game switches to it by itself if the main one runs out)</label>
+          <label>Speech model (the lite one is the default and costs about a third less; each model has its own daily limit, and the game switches to the other one by itself if yours runs out)</label>
           <div class="row"><select id="setTtsModel" style="width:100%"></select></div>
           <label>Voice requests per reply (your plan limits voice requests per day). One request makes the quota last longest, but the voice starts only once the whole reply is written; more requests start sooner.</label>
-          <div class="row"><select id="setTtsChunk" style="width:100%"><option value="one">Fewest: 1 request per reply (default; starts when the reply is complete)</option><option value="two">2 requests per reply (starts sooner)</option><option value="2000">About 3 requests per reply (quick start)</option><option value="700">About 4 requests per reply (smoothest)</option></select></div>
+          <div class="row"><select id="setTtsChunk" style="width:100%"><option value="one">Fewest: 1 request per reply (starts when the reply is complete)</option><option value="two">2 requests per reply (starts sooner)</option><option value="2000">About 3 requests per reply (default; quick start)</option><option value="700">About 4 requests per reply (smoothest)</option></select></div>
           <label>Narration style (how it should be read)</label>
           <div class="row"><textarea id="setTtsStyle" rows="4" style="width:100%"></textarea></div>
         </div>
@@ -328,7 +328,7 @@ const $ = id => document.getElementById(id);
 const KEY = 'holodeck.v2';
 // Google Gemini through its OpenAI-compatible endpoint. "Test connection" lists the models a key can really use and swaps in available ones if a default is missing.
 const GEMINI = { base: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-3.1-pro-preview', cheap: 'gemini-3.8-flash', embed: 'gemini-embedding-2-preview',
-  models: ['gemini-3.1-pro-preview', 'gemini-3.8-flash'], ttsModel: 'gemini-3.8-flash-tts', ttsLite: 'gemini-3.8-flash-lite-tts', cheapLite: 'gemini-3.1-flash-lite', prices: '2,12,0.5,3,10',
+  models: ['gemini-3.1-pro-preview', 'gemini-3.8-flash'], ttsModel: 'gemini-3.8-flash-lite-tts', ttsBackup: 'gemini-3.8-flash-tts', cheapLite: 'gemini-3.1-flash-lite', prices: '2,12,0.5,3,10',
   cacheRate: 0.25 };   // cached input is billed at about this fraction of the normal input price (an estimate)
 const RETIRED = { model: ['gemini-2.5-pro'], cheap: ['gemini-2.5-flash'], embed: ['gemini-embedding-001'] };   // saved values matching these are upgraded to the new defaults
 const BIBLE_EVERY = 10;
@@ -1193,7 +1193,7 @@ const GEMINI_HOST = 'https://generativelanguage.googleapis.com/v1beta';
 const DEFAULT_TTS_STYLE = 'Narrate like a gifted audiobook reader telling an immersive adventure story: warm, expressive and unhurried, with natural pauses. Bring dialogue to life with subtle shifts in tone and pace, and let moments of tension, wonder and humour show in your voice.';
 const GEMINI_VOICES = ['Achernar','Achird','Algenib','Algieba','Alnilam','Aoede','Autonoe','Callirrhoe','Charon','Despina','Enceladus','Erinome','Fenrir','Gacrux','Iapetus','Kore','Laomedeia','Leda','Orus','Pulcherrima','Puck','Rasalgethi','Sadachbia','Sadaltager','Schedar','Sulafat','Umbriel','Vindemiatrix','Zephyr','Zubenelgenubi'];
 const DEFAULT_TTS_VOICE = 'Sulafat';
-let activeGemini = null, geminiWarned = false, geminiBlocked = false, ttsLiteNow = false;   // ttsLiteNow: the chosen voice model hit its daily quota, so use the lite one until reload or Test voice
+let activeGemini = null, geminiWarned = false, geminiBlocked = false, ttsBackupNow = false;   // ttsBackupNow: the chosen voice model hit its daily quota, so use the other one until reload or Test voice
 const useGemini = () => (S().ttsEngine || 'gemini') === 'gemini' && !!S().key && !S().fake && !geminiBlocked;   // geminiBlocked: quota hit (HTTP 429), so stay on the browser voice until reload or Test voice
 function stopSpeech() { blockedPlay = null; talkUntil = 0; if (TTS) speechSynthesis.cancel(); if (activeGemini) { activeGemini.stop(); activeGemini = null; } }
 // iPhone/iPad Safari only lets a page start sound from a tap. A fresh new Audio() per clip, played seconds later when the API answers,
@@ -1214,7 +1214,7 @@ function unlockAudio(e) {
 ['touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, unlockAudio, true));
 const TAP_TO_HEAR = 'Tap anywhere to hear the narrator (this browser needs a tap before it plays sound).';
 function playClip(fail) {   // plays whatever is loaded in the shared player; if the browser still refuses, waits for the next tap
-  player.play().then(() => { audioUnlocked = true; }, e => {
+  player.play().then(() => { audioUnlocked = true; if (actx) ensureAudio(); }, e => {
     if (!e || e.name !== 'NotAllowedError') { fail(); return; }
     voiceStatus(TAP_TO_HEAR, true);
     blockedPlay = () => { if (!handsActive) voiceStatus(''); player.play().catch(fail); };
@@ -1228,7 +1228,7 @@ function wavFromPcm(pcm, rate) {   // raw 16-bit mono PCM -> WAV, in case the AP
 }
 const ttsCache = new Map();   // voice+model+style+text -> audio URL; replaying a message costs nothing while the page stays open
 async function geminiTTS(text) {
-  const chosen = S().ttsModel || GEMINI.ttsModel, voice = (A() && A().ttsVoice) || S().ttsVoice || DEFAULT_TTS_VOICE, model = ttsLiteNow ? GEMINI.ttsLite : chosen, style = S().ttsStyle || DEFAULT_TTS_STYLE, ck = [voice, model, style, text].join('\u0001');
+  const chosen = S().ttsModel || GEMINI.ttsModel, voice = (A() && A().ttsVoice) || S().ttsVoice || DEFAULT_TTS_VOICE, backup = chosen === GEMINI.ttsModel ? GEMINI.ttsBackup : GEMINI.ttsModel, model = ttsBackupNow ? backup : chosen, style = S().ttsStyle || DEFAULT_TTS_STYLE, ck = [voice, model, style, text].join('\u0001');
   if (ttsCache.has(ck)) return ttsCache.get(ck);
   const body = {
     model,
@@ -1239,9 +1239,9 @@ async function geminiTTS(text) {
   const r = await netFetch(GEMINI_HOST + '/interactions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': S().key }, body: JSON.stringify(body) });
   if (!r.ok) {
     const body = (await r.text()).slice(0, 200);
-    // Quotas are per model, so when the chosen voice model runs out, switch to the lite one (its own daily allowance) before giving up on Gemini.
-    if (r.status === 429 && model !== GEMINI.ttsLite) { ttsLiteNow = true; console.warn('Voice quota hit on ' + model + '; switching to ' + GEMINI.ttsLite);
-      if (A()) addMsg('sys', 'The main Gemini voice has used up its allowance for now, so the lighter voice model (' + GEMINI.ttsLite + ') takes over.'); return geminiTTS(text); }
+    // Quotas are per model, so when the chosen voice model runs out, switch to the other one (its own daily allowance) before giving up on Gemini.
+    if (r.status === 429 && !ttsBackupNow) { ttsBackupNow = true; console.warn('Voice quota hit on ' + model + '; switching to ' + backup);
+      if (A()) addMsg('sys', 'The Gemini voice has used up its allowance for now, so the other voice model (' + backup + ') takes over.'); return geminiTTS(text); }
     if (r.status === 429) geminiBlocked = true; throw new Error('Gemini voice HTTP ' + r.status + ': ' + body); }
   const j = await r.json(); let data = null;
   (j.steps || []).forEach(s => (s.content || []).forEach(c => { if (c.type === 'audio' && c.data) data = c.data; }));
@@ -1257,7 +1257,7 @@ async function geminiTTS(text) {
 // request once it is complete (fewest requests, slower start); "two" sends a short first piece, then the rest. Otherwise chunk sizes GROW:
 // a short first piece (fast start), then each piece ~3x larger up to the cap, each requested as soon as it is complete.
 function makeGeminiSpeaker(done) {
-  const mode = String(S().ttsChunk || 'one');
+  const mode = String(S().ttsChunk || '2000');
   let buf = '', pend = '', q = [], ended = false, fired = false, playing = false, next = 0, target = 130, stopped = false, audio = null;
   const clean = t => t.replace(/[*_#>`]/g, '').replace(/\s+/g, ' ').trim();
   const warn = e => { if (geminiWarned) return; geminiWarned = true; console.warn(e);
@@ -1371,7 +1371,7 @@ function testDeviceVoice(report) {   // speaks TEST_LINE with the device voice a
 }
 $('testDevice').onclick = () => { stopSpeech(); voiceSuspect = false; testDeviceVoice(t => diag([t])); };   // runs inside your tap, which Safari always allows
 $('testVoice').onclick = async () => {
-  autoSave(); stopSpeech(); geminiWarned = false; geminiBlocked = false; ttsLiteNow = false; voiceSuspect = false;
+  autoSave(); stopSpeech(); geminiWarned = false; geminiBlocked = false; ttsBackupNow = false; voiceSuspect = false;
   const lines = [], report = (i, t) => { lines[i] = t; diag(lines); };
   if (TTS) { try { const p = new SpeechSynthesisUtterance(' '); p.volume = 0; speechSynthesis.speak(p); } catch (e) {} }   // inside this tap, so the device voice may speak after the Gemini attempt
   if (S().fake || !S().key || S().ttsEngine === 'browser') { report(0, 'Gemini voice: ' + (S().ttsEngine === 'browser' ? 'switched off in Settings' : 'no API key (or offline test mode)') + ', so only the device voice is tested.'); testDeviceVoice(t => report(1, t)); return; }
@@ -1392,7 +1392,10 @@ $('story').addEventListener('click', e => { const m = e.target.closest('.msg.gm'
 function micUI(on) { listening = on; }
 // ---------------- Ambient sound (synthesised, no files): plays while the story is being prepared, stops when the narrator starts ----------------
 let actx = null, amb = null, dictBuf = '';
-function ensureAudio() { try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) {} return actx; }
+function ensureAudio() { try { if (!actx || actx.state === 'closed') actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state !== 'running') actx.resume(); } catch (e) {} return actx; }   // iPhone leaves it 'interrupted' after the screen sleeps
+// The thinking sound and the beeps need a running AudioContext, and phones only restart one inside a tap. Since the microphone now comes back
+// on its own after the screen wakes, there may be no Hands-free tap to do it, so any tap on the page (or the narrator starting) wakes the sound too.
+['pointerdown', 'touchend', 'keydown'].forEach(t => document.addEventListener(t, () => { if (actx && actx.state !== 'running') ensureAudio(); }, true));
 function ambientKind() {
   let k = S().ambient || (handsActive ? 'calm' : 'off');
   if (k === 'auto') {
@@ -1480,7 +1483,7 @@ setInterval(() => {
 function listen() {
   if (!SR) { alert('Speech recognition is not supported in this browser. Chrome, Edge and Safari support it.'); handsActive = false; setHandsUI(); return; }
   if (!handsActive || recRun || document.visibilityState === 'hidden') return;   // a hidden page restarts it when it comes back
-  const me = rec = new SR(); rec.lang = SPEECH_LANG;   // `me`: a session replaced after the screen woke up is ignored when it finally ends rec.interimResults = true; rec.continuous = true;
+  const me = rec = new SR(); rec.lang = SPEECH_LANG; rec.interimResults = true; rec.continuous = true;   // `me`: a session replaced after the screen woke up is ignored when it finally ends
   let finalText = dictBuf ? dictBuf + ' ' : '', dictDone = false;
   recRun = true;
   rec.onstart = () => { micUI(true); };
@@ -2211,7 +2214,7 @@ function fillModels() {
   fillCombo('setModel', [GEMINI.model, ...GEMINI.models], S().model || GEMINI.model);
   fillCombo('setCheap', [GEMINI.cheap, ...GEMINI.models, GEMINI.cheapLite], S().cheap || GEMINI.cheap);
   fillCombo('setEmbed', [GEMINI.embed], embedModel(), true);
-  fillCombo('setTtsModel', [GEMINI.ttsModel, GEMINI.ttsLite], S().ttsModel || GEMINI.ttsModel);
+  fillCombo('setTtsModel', [GEMINI.ttsModel, GEMINI.ttsBackup], S().ttsModel || GEMINI.ttsModel);
 }
 $('setTtsVoice').innerHTML = GEMINI_VOICES.map(v => '<option>' + v + '</option>').join('') + '<option value="__custom">Custom voice ID...</option>';
 function syncTtsVoiceUI() { $('setTtsVoiceCustom').style.display = $('setTtsVoice').value === '__custom' ? '' : 'none'; }
@@ -2227,10 +2230,10 @@ function loadSettings() {
   if ((S().effortV || 0) < 3) { db.settings.effort = 'low'; db.settings.effortV = 3; }   // one-time: low thinking by default (deep thinking was the biggest cost)
   if ((S().notesV || 0) < 2) { db.settings.notesModel = 'cheap'; db.settings.notesV = 2; }   // one-time: hidden plot notes on the cheap model
   if (S().ttsV !== 1) { db.settings.ttsEngine = 'gemini'; db.settings.speak = true; db.settings.ttsV = 1; }   // one-time: Gemini narrator voice and reading aloud are on by default
-  if (S().ttsChunkV !== 2) { db.settings.ttsChunk = 'one'; db.settings.ttsChunkV = 2; }   // one-time: one voice request per reply, so a daily voice quota lasts longest
+  if (S().ttsChunkV !== 3) { db.settings.ttsChunk = '2000'; db.settings.ttsChunkV = 3; if (S().ttsModel === 'gemini-3.8-flash-tts') delete db.settings.ttsModel; }   // one-time: lite voice model, about 3 voice requests per reply
   $('setEffort').value = S().effort === undefined ? 'low' : S().effort;
   $('setTuneRecent').value = tune('recent'); $('setTuneChapters').value = tune('chapters'); $('setTuneRecall').value = tune('recall');
-  $('setNotesModel').value = S().notesModel || 'cheap'; $('setTtsChunk').value = ['one', 'two', '2000', '700'].includes(String(S().ttsChunk)) ? String(S().ttsChunk) : 'one'; $('setPrices').value = S().prices || GEMINI.prices;
+  $('setNotesModel').value = S().notesModel || 'cheap'; $('setTtsChunk').value = ['one', 'two', '2000', '700'].includes(String(S().ttsChunk)) ? String(S().ttsChunk) : '2000'; $('setPrices').value = S().prices || GEMINI.prices;
   $('setKey').value = S().key || ''; $('setFake').checked = !!S().fake; $('setNoEmbed').checked = !!S().noEmbed; $('setSpeak').checked = !!S().speak; $('setCleanDict').checked = S().cleanDict !== false;
   $('setAmbient').value = S().ambient || ''; $('setRate').value = S().rate || 1; $('setEngine').value = S().ttsEngine || 'gemini'; $('setTtsStyle').value = S().ttsStyle || DEFAULT_TTS_STYLE;
   const me = S().me || {}; $('setMeName').value = me.name || ''; $('setMeGender').value = me.gender || ''; $('setMeInterest').value = me.interest || ''; $('setMeBorn').value = me.born || '';
@@ -2252,7 +2255,7 @@ $('impFile').onchange = async e => {
   } catch (err) { alert('Import failed: ' + err.message); }
 };
 function collectSettings() {   // the browser voice is saved by its own handler (only when you pick one)
-  return { effort: $('setEffort').value, effortV: 3, notesV: 2, ttsV: 1, voiceV: 3, ttsChunkV: 2, welcomed: true, tune_recent: +$('setTuneRecent').value, tune_chapters: +$('setTuneChapters').value, tune_recall: +$('setTuneRecall').value,
+  return { effort: $('setEffort').value, effortV: 3, notesV: 2, ttsV: 1, voiceV: 3, ttsChunkV: 3, welcomed: true, tune_recent: +$('setTuneRecent').value, tune_chapters: +$('setTuneChapters').value, tune_recall: +$('setTuneRecall').value,
     notesModel: $('setNotesModel').value, ttsChunk: $('setTtsChunk').value, prices: $('setPrices').value.trim() || GEMINI.prices, key: $('setKey').value.trim(), model: $('setModel').value.trim(), cheap: $('setCheap').value.trim(), fake: $('setFake').checked,
     embed: $('setEmbed').value.trim(), noEmbed: $('setNoEmbed').checked, speak: $('setSpeak').checked, cleanDict: $('setCleanDict').checked, ambient: $('setAmbient').value,
     me: { name: $('setMeName').value.trim(), gender: $('setMeGender').value.trim(), interest: $('setMeInterest').value.trim(), born: +$('setMeBorn').value || 0 },
