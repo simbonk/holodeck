@@ -1474,8 +1474,8 @@ setInterval(() => {
 }, 400);
 function listen() {
   if (!SR) { alert('Speech recognition is not supported in this browser. Chrome, Edge and Safari support it.'); handsActive = false; setHandsUI(); return; }
-  if (!handsActive || recRun) return;
-  rec = new SR(); rec.lang = SPEECH_LANG; rec.interimResults = true; rec.continuous = true;
+  if (!handsActive || recRun || document.visibilityState === 'hidden') return;   // a hidden page restarts it when it comes back
+  const me = rec = new SR(); rec.lang = SPEECH_LANG;   // `me`: a session replaced after the screen woke up is ignored when it finally ends rec.interimResults = true; rec.continuous = true;
   let finalText = dictBuf ? dictBuf + ' ' : '', dictDone = false;
   recRun = true;
   rec.onstart = () => { micUI(true); };
@@ -1494,13 +1494,16 @@ function listen() {
     $('input').value = full;
   };
   rec.onerror = e => {
-    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { handsActive = false; voiceErr = ''; setHandsUI(); alert('Microphone access was blocked. Allow it in the browser address bar (lock icon) and tap Hands-free again.'); }
+    if (rec !== me) return;
+    if ((e.error === 'not-allowed' || e.error === 'service-not-allowed') && Date.now() - backAt < 8000) { handsActive = false; setHandsUI(); voiceStatus('The microphone switched off while the screen was asleep. Tap Hands-free to turn it back on.', true); }   // iPhone: a restart after sleep can need a tap
+    else if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { handsActive = false; voiceErr = ''; setHandsUI(); alert('Microphone access was blocked. Allow it in the browser address bar (lock icon) and tap Hands-free again.'); }
     else if (e.error === 'audio-capture') { handsActive = false; setHandsUI(); alert('No microphone was found.'); }
     else if (micMuted()) quietErr = true;   // errors while the narrator talks or the story loads are expected (Edge drops the speech service while audio plays): retry quietly, show nothing
     else if (e.error === 'network') voiceErr = 'The browser speech service could not be reached (network). Retrying...';
     else if (e.error !== 'no-speech' && e.error !== 'aborted') voiceErr = 'Speech error: ' + e.error + '. Retrying...';
   };
   rec.onend = () => {
+    if (rec !== me) return;
     recRun = false; micUI(false);
     if (endTimer) { clearTimeout(endTimer); endTimer = null; dictDone = true; }   // the session ended while the send phrase was pending: treat it as sent
     const t = $('input').value.trim();
@@ -1511,12 +1514,28 @@ function listen() {
   };
   try { rec.start(); } catch (e) { recRun = false; console.warn(e); if (handsActive) setTimeout(listen, 1000); }
 }
+// Phones (iPhone especially) cut the microphone when the screen sleeps. While hands-free is on, a screen wake lock keeps the screen awake
+// (Safari 16.4+, Chrome, Edge); the browser drops the lock whenever the page is hidden, so it is taken again on return. If the screen
+// did sleep, the microphone is restarted cleanly when the page comes back, and if the phone wants a tap first, the status line says so.
+let wakeLock = null, backAt = 0;
+async function keepAwake(on) {
+  try {
+    if (on && !wakeLock && 'wakeLock' in navigator && document.visibilityState === 'visible') { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); }
+    else if (!on && wakeLock) { const w = wakeLock; wakeLock = null; await w.release(); }
+  } catch (e) { console.warn('wake lock', e); }
+}
+document.addEventListener('visibilitychange', () => {
+  if (!handsActive) return;
+  if (document.visibilityState === 'hidden') { try { rec.abort(); } catch (e) {} return; }
+  backAt = Date.now(); keepAwake(true); ensureAudio();
+  const old = rec; rec = null; recRun = false; dictBuf = ''; try { old && old.abort(); } catch (e) {} setTimeout(listen, 400);   // a fresh session: the old one died with the screen
+});
 $('micBtn').onclick = () => {
   ensureAudio();   // browsers only allow sound after a tap, so unlock it here for the ambient sound later
-  if (handsActive) { handsActive = false; dictBuf = ''; try { rec.abort(); } catch (e) {} setHandsUI(); return; }
+  if (handsActive) { handsActive = false; dictBuf = ''; try { rec.abort(); } catch (e) {} setHandsUI(); keepAwake(false); return; }
   if (!SR) { alert('Speech recognition is not supported in this browser. Chrome, Edge and Safari support it.'); return; }
   if (!S().speak) { db.settings.speak = true; $('setSpeak').checked = true; persist(); }   // hands-free needs the story read aloud
-  handsActive = true; voiceErr = ''; lastMuted = micMuted(); setHandsUI(); blip(660); listen();
+  handsActive = true; voiceErr = ''; lastMuted = micMuted(); setHandsUI(); blip(660); keepAwake(true); listen();
 };
 
 // ---------------- Experience Curator ----------------
@@ -1873,7 +1892,7 @@ function finalMessages(a) {
 }
 async function finishAdventure() {
   const name = db.current, a = A(); if (!a || a.result || a.finishing) return;
-  a.finishing = true; handsActive = false; try { rec.abort(); } catch (e) {} setHandsUI();
+  a.finishing = true; handsActive = false; try { rec.abort(); } catch (e) {} setHandsUI(); keepAwake(false);
   const note = addMsg('sys', 'The adventure is complete. The holodeck is preparing your report card...');
   try {
     await memoryJob; await slowJob;
