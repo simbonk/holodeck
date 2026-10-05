@@ -23,13 +23,13 @@ A single-file, AI-run text adventure powered by Google Gemini. Say how much time
 - **You stay in control:** edit the bible and lore mid-story (your edits win over earlier narration), undo a turn (memory included), watch the cost meter, save adventures as plain JSON files.
 
 ## Quick start
-1. Get a free Gemini API key: https://aistudio.google.com/apikey
+1. Get a Gemini API key at https://aistudio.google.com/apikey and set up billing for it (a small prepaid balance works).
 2. Open the app (see below) and paste the key on the welcome screen.
 3. Press **Save key and start**.
 
 No key yet? Choose **Try the offline demo** to look around with a fake Game Master.
 
-**Free keys:** Google's free tier does not include the Pro story model. The app detects this on the first refusal (or when you press **Test connection**) and runs the story on the Flash model instead. Paid keys keep the Pro default.
+**Billing:** the game needs a key with billing set up. Without it Google refuses the Pro story model; the app notices (or tells you when you press **Test connection**) and falls back to the Flash model until billing is on.
 
 ### Running it
 - **Hosted:** rename `holodeck-optimized.html` to `index.html`, push to a GitHub repo, and enable *Settings > Pages* (deploy from the main branch). Share the link; every player brings their own key.

@@ -124,7 +124,7 @@
           <b>GOOGLE GEMINI</b>
           <label>API key</label>
           <div class="row"><input id="setKey" type="password" placeholder="AIza..." autocomplete="off"></div>
-          <div class="warn">Stored only in this browser (localStorage) and sent only to Google. Use a key with a low spending cap, and do not enter it on a shared computer. Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--accent)">aistudio.google.com/apikey</a>.</div>
+          <div class="warn">Stored only in this browser (localStorage) and sent only to Google. Use a key with a low spending cap, and do not enter it on a shared computer. Get a key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--accent)">aistudio.google.com/apikey</a>.</div>
           <p class="tag" id="keyStatus"></p>
           <p><button id="testConn">Test connection &amp; list models</button> <span class="tag" id="connStatus"></span></p>
         </div>
@@ -274,7 +274,7 @@
   <h1>WELCOME TO THE HOLODECK</h1>
   <p>An AI Game Master runs a story made just for you. Answer a few quick questions (how much time you have, the feeling you want, your name and age, then either a quick description or a deeper set-up with a photo), then play by typing or talking. It remembers everything, keeps an eye on the clock, lands a real ending and grades the result.</p>
   <h3>SET UP IN ABOUT A MINUTE</h3>
-  <ol><li>Get a free Gemini API key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--accent)">aistudio.google.com/apikey</a>.</li><li>Paste it below.</li><li>Press Start.</li></ol>
+  <ol><li>Get a Gemini API key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--accent)">aistudio.google.com/apikey</a> and set up billing for it (a small prepaid balance works).</li><li>Paste it below.</li><li>Press Start.</li></ol>
   <div class="row"><input id="wKey" type="password" placeholder="Paste your API key" autocomplete="off"></div>
   <p class="warn">Your key is stored only in this browser and sent only to Google. Use a key with a low spending cap, and do not enter it on a shared computer.</p>
   <button class="big primary" id="wStart">Save key and start<small>Opens the quick questions</small></button>
@@ -413,7 +413,7 @@ async function llmError(r, what) {   // plain-English explanation for the most c
   const body = (await r.text()).slice(0, 250), hint = {
     400: 'The request was rejected.', 401: 'The API key was not accepted. Check it in Settings > Connection.', 403: 'The key is not allowed to use "' + what + '". Press Test connection in Settings > Connection.',
     404: '"' + what + '" was not found (preview models get renamed or retired). Press Test connection in Settings > Connection and pick an available model.',
-    429: 'Rate limit or daily quota reached (free-tier keys get only a few requests per minute and per day). Wait a bit, or lower the voice and memory settings.',
+    429: 'Rate limit or daily quota reached. Wait a bit, or lower the voice and memory settings.',
     503: 'Google\'s service is busy right now. Wait a moment and try again.' }[r.status];
   return new Error((hint ? hint + ' (HTTP ' + r.status + ') ' : 'LLM error ' + r.status + ': ') + body);
 }
@@ -457,7 +457,7 @@ function notice(t) {   // a system line in the story; held until the story is on
 function goFree(model) {
   if (S().freeTier) return;
   db.settings.freeTier = true; persist(); keyStatus();
-  notice('Your API key is on Google\'s free tier, which does not include "' + model + '", so the story now uses "' + cheapModel() + '" instead. To use the richer model, enable billing for your key\'s Google project, then press Test connection in Settings > Connection.');
+  notice('Your API key has no billing set up, so Google refuses "' + model + '" and the story now uses "' + cheapModel() + '" instead. Set up billing for your key\'s Google project, then press Test connection in Settings > Connection.');
 }
 // Runs a request; on a free-tier refusal of the story model, switches to the cheap model; on a short rate limit, waits once and retries.
 async function quotaRetry(model, big, run) {
@@ -475,7 +475,7 @@ async function probeTier() {   // one tiny request to the story model; returns a
     const r = await llmFetch(model, [{ role: 'user', content: 'Reply with the single word OK.' }], {});
     if (r.ok) { if (S().freeTier) { delete db.settings.freeTier; persist(); keyStatus(); } return 'Your key can use the story model "' + model + '".'; }
     const body = await r.text();
-    if (r.status === 429 && isTierRefusal(body)) { goFree(model); return 'Free-tier key: "' + model + '" is not included, so the story will use "' + cheapModel() + '".'; }
+    if (r.status === 429 && isTierRefusal(body)) { goFree(model); return 'This key has no billing set up: "' + model + '" is refused, so the story will use "' + cheapModel() + '" until you set up billing.'; }
     return 'The story model "' + model + '" answered HTTP ' + r.status + '.';
   } catch (e) { return ''; }
 }
@@ -524,7 +524,7 @@ function showUsage() {
   el.textContent = 'Last turn: story ' + kfmt(g.i - g0.i) + ' in' + (gc > 0 ? ' (' + kfmt(gc) + ' cached)' : '') + ' / ' + kfmt(g.o - g0.o) + ' out' + (g.th - g0.th > 0 ? ' (' + kfmt(g.th - g0.th) + ' thinking)' : '') +
     (dn.voice && dn.voice.s ? ' | voice ' + Math.round(dn.voice.s) + 's' : '') + ' | ~$' + last.total.toFixed(3) +
     '  ||  Adventure: ~$' + tot.total.toFixed(2) + ' (story ' + tot.story.toFixed(2) + ', memory ' + tot.bg.toFixed(2) + ', voice ' + tot.voice.toFixed(2) + ')' +
-    (S().freeTier ? '  ||  Free-tier key: Google does not bill these calls' : '');
+    (S().freeTier ? '  ||  Key without billing: Google does not bill these calls' : '');
 }
 // Streaming version of the story call: onDelta(text) fires as tokens arrive. Returns the full reply.
 async function chatStream(messages, onDelta) {
@@ -2306,7 +2306,7 @@ function collectSettings() {   // the browser voice is saved by its own handler 
 function keyStatus() {
   const k = S().key;
   $('keyStatus').textContent = (k ? 'Key saved (ends in ' + k.slice(-4) + '). ' : 'No key saved yet. ') + 'Story model: ' + (S().model || GEMINI.model) + ' | cheap model: ' + cheapModel() +
-    (S().freeTier ? ' | FREE-TIER KEY: the story uses the cheap model' : '') + (S().fake ? ' | OFFLINE TEST MODE IS ON' : '');
+    (S().freeTier ? ' | KEY WITHOUT BILLING: the story uses the cheap model' : '') + (S().fake ? ' | OFFLINE TEST MODE IS ON' : '');
 }
 function autoSave() {
   const old = db.settings, next = Object.assign({}, old, collectSettings());   // merged, so settings that are not on the form (like the browser voice) survive
