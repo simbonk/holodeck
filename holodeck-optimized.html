@@ -298,6 +298,7 @@
     <li><b>Try hands-free.</b> Tap <b>&#127911; Hands-free</b> next to Send, then just talk. When you have finished, say <b>"make it so"</b> and the phonodeck answers.</li>
     <li><b>Allow the microphone</b> when your browser asks, so hands-free can hear you. You can do it now:</li>
   </ol>
+  <p class="warn" id="gwNoVoice" style="display:none"><b>This browser can't listen.</b> Hands-free talking needs <b>Chrome</b>, <b>Edge</b> or <b>Safari</b>: Firefox can't turn speech into text. The phonodeck is at its best when you talk to it, so please open the invite link you were sent in one of those browsers. You can still type here if you prefer.</p>
   <button class="big" id="gwMic">Allow the microphone<small>Your browser asks once</small></button>
   <p class="tag" id="gwMicStatus"></p>
   <button class="big primary" id="gwStart">Start<small>A few quick questions, then your story begins</small></button>
@@ -327,14 +328,13 @@
   <div id="curMe" style="display:none;margin:12px 0">
     <div class="tag">First and last name</div><div class="row"><input id="meName" placeholder="First name" autocomplete="off" style="flex:1"> <input id="meLast" placeholder="Last name" autocomplete="off" style="flex:1"></div>
     <div class="tag">Your age</div><div class="row"><input id="meAge" type="number" min="3" max="120" placeholder="e.g. 10, 35 or 70"></div>
-    <div id="meRomanceRow"><div class="tag">Romance (optional, adults only)</div><div class="row"><input id="meRomance" placeholder="I am a ... who is interested in ..." autocomplete="off"></div></div>
   </div>
   <div id="curDepth" style="display:none">
     <button class="big" id="depQuick">Quick start<small>Describe what you want in a sentence or two. The phonodeck fills in the rest as best it can, and the game begins.</small></button>
     <button class="big" id="depDeep">Deep set-up<small>A carefully curated experience: optionally upload a photo to paint the world from, then a few more questions, with suggestions tailored to what you have told me.</small></button>
   </div>
   <textarea id="curA" placeholder="Type your own answer, or tap options above..."></textarea>
-  <div id="curSuggestRow" style="display:none;margin:4px 0 8px"><button id="curSuggest" class="mini">&#10024; Suggest some feelings</button></div>
+  <div id="curSuggestRow" style="display:none;margin:4px 0 8px"><button id="curSuggest" class="mini">&#10024; Make some suggestions</button></div>
   <div class="nav2">
     <button id="curBack">Back</button>
     <button id="curSkip">Surprise me</button>
@@ -1688,7 +1688,7 @@ $('micBtn').onclick = () => {
 // A session of 15 minutes or less is told as a clean, simple short story, and its option chips (cs) stay on Earth, in familiar times.
 const QUESTIONS = [
   { id: 'time', single: true, q: 'How much time do you have?', h: 'You play by the clock, not by turns. The Game Master keeps an eye on the time and lands a proper ending before it runs out, then you get a report card. 10-15 minutes makes a quick short story.', c: ['10 minutes (a quick story)', '20 minutes', '30 minutes', '45 minutes', '1 hour', '2 hours (an epic)'], ph: 'Or type your own, e.g. 25 minutes' },
-  { id: 'feeling', suggest: 'Suggest some feelings', q: 'What feeling do you want to come away with?', h: 'This is the Game Master\'s main goal: everything bends toward it. Describe it in your own words; the more specific, the better the story. Stuck? Press "Suggest some feelings" (it builds on anything you have typed).', c: [], ph: 'e.g. the cosy feeling of a snow day with nowhere to be' },
+  { id: 'feeling', suggest: 'Make some suggestions', q: 'What feeling do you want to come away with?', h: 'This is the Game Master\'s main goal: everything bends toward it. Describe it in your own words; the more specific, the better the story. Stuck? Press "Make some suggestions" (it builds on anything you have typed).', c: [], ph: 'e.g. the cosy feeling of a snow day with nowhere to be' },
   { id: 'mode', single: true, q: 'How do you want to play?', h: 'Curated story: a hidden plot with a beginning, middle and end, which bends (or waits) when you are happy elsewhere. Experience simulator: no plot points at all, just a richly painted world, your own goal and the feeling.', c: ['Curated story (a plot that bends to you)', 'Experience simulator (no plot, just the world and the feeling)'] },
   { id: 'photo', photo: true, q: 'Paint the world from a photo?', h: 'Optional. A picture is worth a thousand words: the phonodeck works out the place, the time and the people, writes the world from them, and fills in the remaining questions for you. Add a caption if you like.', c: [], ph: 'Optional caption: who or where is this? e.g. "Me and Dana in Lisbon, summer 2019"' },
   { id: 'goal', q: 'What do you want to do there?', h: 'Your goal for this experience. The Game Master helps you do it, with no plot getting in the way. You can change your mind once you are there.', c: ['Explore every corner', 'Spend time with someone special', 'Learn a craft from a local', 'Eat my way through the place', 'Do absolutely nothing', 'Throw a party'],
@@ -1719,8 +1719,8 @@ const QUESTIONS = [
     ck: ['Nothing too scary', 'No spiders', 'Lots of jokes', 'In the style of a fairy tale'] }
 ];
 const QBY = Object.fromEntries(QUESTIONS.map(q => [q.id, q]));
-// Question 4: name, age and (adults only) romance, in one step of three boxes. Pre-filled from Settings > Personal details.
-const ME_Q = { id: 'me', me: true, q: 'About you', h: 'Your name and age shape the whole story: a 10-year-old and a 70-year-old get very different experiences. Filled in from Settings > Personal details; change them to play as someone else. Romance is only offered to adults.', c: [] };
+// Question 4: name and age, in one step. Pre-filled from Settings > Personal details. (Romance is its own question at the end of the deep set-up.)
+const ME_Q = { id: 'me', me: true, q: 'About you', h: 'Your name and age shape the whole story: a 10-year-old and a 70-year-old get very different experiences. Filled in from Settings > Personal details; change them to play as someone else.', c: [] };
 // Question 5: a quick description and go, or the deep set-up (photo and the detailed questions).
 // Two big buttons: Quick shows a box to describe the experience (Next then creates it); Deep moves straight on to the photo and the detailed
 // questions. The detailed questions are only counted ("Question 5 of 5") once Deep is chosen.
@@ -1734,6 +1734,16 @@ function mePrefill() {   // answers filled in from Settings > Personal details
   if (me.born > 1900) out.age = String(new Date().getFullYear() - me.born);
   if (g || i) out.romance = 'I am ' + who + (who.startsWith('someone who') ? ' and' : ' who is') + ' interested in ' + (what || '...');
   return out;
+}
+// The last question of the deep set-up, for adults only, and only when an earlier answer hints at romance (a "Romantic" vibe, love in the
+// feeling, a sweetheart among the company...). Pre-filled from Settings > Personal details. Without a hint it is skipped, and the details in
+// Settings still reach the story quietly as background (see playerBrief).
+const ROMANCE_Q = { id: 'romance', q: 'Any romance in this story?', h: 'Something you said suggests romance. Who are you, and who are you drawn to? It stays in the background unless you take it further. Pick "No romance" to leave it out.', c: ['No romance'], ph: 'I am a ... who is interested in ...' };
+const noRomance = t => !String(t || '').trim() || isNoPref(t) || /^no romance/i.test(String(t).trim());
+const ROMANCE_HINT = /\b(roman\w*|love|lovers?|crush|flirt\w*|dating|date night|kiss\w*|sweetheart|passion\w*|wedding|marr(y|ied|iage)|seduc\w*|courtship|affair|soulmate)\b/i;
+function romanceHinted() {   // any earlier answer (not the romance answer itself) that mentions romance; "in love with a place" does not count
+  return Object.entries(cur.answers).some(([k, v]) => !['romance', 'name', 'age', 'me', 'time', 'mode', 'depth'].includes(k) && !isNoPref(v) &&
+    ROMANCE_HINT.test(String(v || '').replace(/\b(no|without|avoid|skip)( the)? romance\b/gi, '').replace(/\bin love with (a|the|this|that) (place|city|town|village|island|country|world|landscape)\b/gi, '')));
 }
 // "Same cast, new story": a shorter questionnaire. The cast, world and the old answers below carry over (and are pre-filled).
 const LINK_Q = { id: 'link', q: 'How does the new story connect to the old one?', h: 'Same cast and world either way; this sets what they remember.', c: ['Sequel: it picks up after the last story', 'Years later', 'Fresh start: same cast, new story', 'Prequel: before it all began'] };
@@ -1751,7 +1761,7 @@ let cur = { i: 0, answers: {}, extra: {}, rounds: {} };
 function curQs() {   // the list depends on the play mode and set-up depth you pick (and a new story with the same cast skips the world questions)
   const sim = simPick(), head = [QBY.time, QBY.feeling, QBY.mode, ME_Q];
   if (cur.src) return head.concat([LINK_Q, sim ? QBY.goal : QBY.hook, WHO2_Q], sim ? [] : [QBY.vibe, QBY.play], [QBY.avoid]);
-  return head.concat([DEPTH_Q], deepPick() ? [QBY.photo].concat((sim ? SIM_IDS : STORY_IDS).map(id => QBY[id])) : []);
+  return head.concat([DEPTH_Q], deepPick() ? [QBY.photo].concat((sim ? SIM_IDS : STORY_IDS).map(id => QBY[id]), !minorPick() && romanceHinted() ? [ROMANCE_Q] : []) : []);
 }
 // Adventures made before answers had ids stored them by position.
 const OLD_IDS = ['world', 'vibe', 'who', 'traits', 'where', 'hook', 'allies', 'threat', 'play', 'avoid', 'length', 'romance'];
@@ -1827,7 +1837,7 @@ function curRender() {
   $('curA').style.display = q.me || (q.depth && !quick) ? 'none' : ''; $('curNext').style.display = q.depth && !quick ? 'none' : '';
   $('depQuick').classList.toggle('primary', quick); $('depDeep').classList.toggle('primary', q.depth && deepPick());
   if (q.depth) $('curHint').textContent = quick ? 'Describe it in a sentence or a paragraph, then press "Create my experience".' : q.h;
-  if (q.me) { const nm = String(cur.answers.name || '').trim().split(/\s+/); $('meName').value = nm.shift() || ''; $('meLast').value = nm.join(' '); $('meAge').value = cur.answers.age || ''; $('meRomance').value = cur.answers.romance || ''; meRomanceShow(); }
+  if (q.me) { const nm = String(cur.answers.name || '').trim().split(/\s+/); $('meName').value = nm.shift() || ''; $('meLast').value = nm.join(' '); $('meAge').value = cur.answers.age || ''; }
   $('curFinish').style.display = cur.photo && cur.photo.canvas && cur.i < n - 1 ? '' : 'none';
   $('curA').value = (q.depth ? cur.answers.describe : cur.answers[q.id]) || ''; $('curA').placeholder = q.ph || 'Type your own answer, or tap options above...';
   $('curSuggestRow').style.display = q.suggest ? '' : 'none'; if (q.suggest) { $('curSuggest').textContent = '\u2728 ' + q.suggest; busyBtn($('curSuggest')); }
@@ -1846,11 +1856,9 @@ function curStore() {
   if (q.depth) { if (quickPick()) cur.answers.describe = $('curA').value.trim(); return; }
   if (!q.me) { cur.answers[q.id] = $('curA').value.trim(); return; }
   const n = +$('meAge').value; cur.answers.name = [$('meName').value.trim(), $('meLast').value.trim()].filter(Boolean).join(' '); cur.answers.age = n > 0 ? String(Math.round(n)) : '';
-  cur.answers.romance = minorPick() ? '' : $('meRomance').value.trim(); cur.answers.me = meSummary();
+  cur.answers.me = meSummary();
 }
-function meSummary() { const x = cur.answers; return [x.name && 'name ' + x.name, x.age && 'age ' + x.age, x.romance && 'romance: ' + x.romance].filter(Boolean).join('; ') || '(not given)'; }
-function meRomanceShow() { const n = +$('meAge').value; $('meRomanceRow').style.display = n > 0 && n < 18 ? 'none' : ''; }
-$('meAge').addEventListener('input', meRomanceShow);
+function meSummary() { const x = cur.answers; return [x.name && 'name ' + x.name, x.age && 'age ' + x.age].filter(Boolean).join('; ') || '(not given)'; }
 $('depQuick').onclick = () => { cur.answers.depth = 'Quick start'; curRender(); $('curA').focus(); };
 $('depDeep').onclick = () => { cur.answers.depth = 'Deep set-up'; delete cur.answers.describe; curAdvance(); };
 $('curBack').onclick = () => { curStore(); if (cur.i > 0) { cur.i--; curRender(); } };
@@ -1860,7 +1868,7 @@ $('curNext').onclick = async () => {
   if (q.photo && cur.photo && !cur.photo.canvas && !(await readPhoto())) return;   // the photo is studied once, when you leave this step
   if (!cur.answers[q.id]) cur.answers[q.id] = q.photo && cur.photo ? '(photo uploaded)' : NOPREF; curAdvance();
 };
-$('curFinish').onclick = () => {   // the photo answered the rest (your name, age and romance were asked before it)
+$('curFinish').onclick = () => {   // the photo answered the rest (your name and age were asked before it; romance comes after, only if hinted)
   curStore(); cur.i = curQs().length - 1; curAdvance();
 };
 $('curCancel').onclick = () => { $('curator').classList.remove('on'); renderStart(); $('start').classList.add('on'); };
@@ -1932,7 +1940,8 @@ async function curAdvance() {
   const qs = curQs();
   if (cur.i < qs.length - 1) { cur.i++; curRender(); return; }
   const answers = qs.flatMap(q => q.depth ? [{ id: 'depth', q: 'Set-up', a: cur.answers.depth }, { id: 'describe', q: 'What you are looking for', a: cur.answers.describe }].filter(x => x.a)
-    : q.me ? [{ id: 'name', q: 'Your name', a: cur.answers.name }, { id: 'age', q: 'Your age', a: cur.answers.age }, { id: 'romance', q: 'Romance', a: cur.answers.romance }].filter(x => x.a)
+    : q.me ? [{ id: 'name', q: 'Your name', a: cur.answers.name }, { id: 'age', q: 'Your age', a: cur.answers.age }].filter(x => x.a)
+    : q.id === 'romance' ? [{ id: 'romance', q: 'Romance', a: noRomance(cur.answers.romance) ? '' : cur.answers.romance }].filter(x => x.a)
     : [{ id: q.id, q: q.q, a: cur.answers[q.id] || '(no preference)' }]);
   { const me = Object.assign({}, S().me), nm = cur.answers.name, age = +cur.answers.age; let ch = false;   // remember your name and age for next time (never overwrites them)
     const [first, ...rest] = String(nm || '').split(/\s+/), last = rest.join(' ');
@@ -2459,6 +2468,10 @@ function guestWelcomeText() {
   if (i.name) $('gwHello').textContent = 'Hi ' + i.name + ', you have been invited to play.';
   $('gwLeft').textContent = i.status !== 'active' ? INVITE_OFF_MSG : i.minutesLeft > 0 ? 'Your invite has about ' + i.minutesLeft + ' minutes of play.' : QUOTA_MSG;
 }
+function guestVoiceCheck() {   // hands-free needs the browser's speech recognition (Firefox has none): say so before they get going
+  const ok = !!SR; $('gwNoVoice').style.display = ok ? 'none' : ''; $('gwMic').style.display = ok ? '' : 'none';
+  $('gwStart').classList.toggle('primary', ok); $('gwStart').firstChild.textContent = ok ? 'Start' : 'Continue by typing';
+}
 $('gwMic').onclick = async () => {
   const st = $('gwMicStatus');
   try { const m = await navigator.mediaDevices.getUserMedia({ audio: true }); m.getTracks().forEach(t => t.stop()); st.textContent = 'The microphone is allowed. You are all set.'; }
@@ -2519,7 +2532,7 @@ $('admClose').onclick = () => { $('admin').classList.remove('on'); history.repla
 if (!db.adventures[db.current]) db.current = '';
 loadSettings(); persist(); refresh(); renderStart(); initDir(); initVoices();
 document.body.classList.toggle('guest', guest());
-if (guest()) { if (!S().guestWelcomed) $('guestWelcome').classList.add('on'); loadInvite(); }
+if (guest()) { if (!S().guestWelcomed) { $('guestWelcome').classList.add('on'); guestVoiceCheck(); } loadInvite(); }
 else if (!S().key && !S().fake && !S().welcomed && !Object.keys(db.adventures).length) $('welcome').classList.add('on');
 if (new URLSearchParams(location.search).has('admin')) { $('admin').classList.add('on'); if (admPw) admRun('list'); }
 keyStatus();
