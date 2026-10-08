@@ -1,8 +1,10 @@
-# Holodeck
+# Phonodeck
+
+*The precursor to the holodeck.*
 
 A single-file, AI-run text adventure powered by Google Gemini. Say how much time you have and the feeling you want, pick a curated story or a plot-free experience (or just upload a photo), and a Game Master builds a world just for you, keeps an eye on the clock, lands a real ending, and grades the result with a report card. Play by typing or hands-free by voice.
 
-<!-- Add a screenshot here: ![Holodeck](screenshot.png) -->
+<!-- Add a screenshot here: ![Phonodeck](screenshot.png) -->
 
 ## Features
 - **Play by the clock, not by turns:** choose 10 minutes to 2 hours. The app learns your pace, estimates how many replies are left, starts wrapping up about three replies from the end, and lands a storybook ending in time. Having fun? **+10 min** in the header stretches the session.
@@ -12,13 +14,13 @@ A single-file, AI-run text adventure powered by Google Gemini. Say how much time
 - **Personal details:** your name, gender and who you're interested in (both free text, in your own words) and your birth year live in *Settings > Personal details* and are filled in for every new experience (change them for any one story). The romance answer also picks the narrator: Sulafat if you're interested in women, Charon if men.
 - **About you, and an age-appropriate story:** question 4 asks your name and age (and, for adults only, romance). A 10-year-old gets a G-rated, simple, playful story with no romance; teenagers get PG; adults get references pitched to their generation.
 - **Quick start or deep set-up:** question 5 has two big buttons: Quick start shows a box to describe what you want, and Create starts the game; Deep set-up goes straight on to an optional photo and the detailed questions, whose suggestions follow your earlier answers (children get their own options).
-- **Paint the world from a photo:** upload a picture and the holodeck works out the place, the time and the people, writes a detailed description of the world, adds lore, and fills in the rest of the questions.
+- **Paint the world from a photo:** upload a picture and the phonodeck works out the place, the time and the people, writes a detailed description of the world, adds lore, and fills in the rest of the questions.
 - **Living lore:** when something changes in play (a relationship, a location, a secret revealed), the lore entry is updated, with earlier versions kept in the Lore tab. It rides on the existing memory call, so it costs no extra requests.
 - **Short sessions that read like short stories:** 15 minutes or less is told clean and simple (one goal, a small cast, a payoff ending), and its suggested settings stay on Earth in familiar times.
 - **Same cast, new story:** after a story you love, start a sequel, a "years later", a fresh start or a prequel with the same characters and world.
 - **Long-term memory:** story bible, lorebook, chapter summaries and hybrid keyword + semantic recall keep long stories consistent.
 - **A plan behind the curtain:** secret roadmap, hidden GM secrets, and a "director" that varies pacing and flags repeated phrases.
-- **Report card:** two grades from a discerning high school teacher: *How the Holodeck did* (did it deliver the feeling and your goals?) and *How you did* (your own choices and play).
+- **Report card:** two grades from a discerning high school teacher: *How the Phonodeck did* (did it deliver the feeling and your goals?) and *How you did* (your own choices and play).
 - **Hands-free voice:** dictation (say *make it so* to send; the phrase glows while the mic listens), Gemini narrator voice, soft background sound, and automatic cleanup of misheard words.
 - **You stay in control:** edit the bible and lore mid-story (your edits win over earlier narration), undo a turn (memory included), watch the cost meter, save adventures as plain JSON files.
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Holodeck</title>
+<title>Phonodeck</title>
 <style>
   :root{--bg:#0b0f14;--panel:#121923;--line:#223042;--fg:#d7e2ee;--dim:#8497ab;--accent:#4fd1c5;--you:#1d2b3c;--warn:#f6c667;--magic:#ffd36b}
   *{box-sizing:border-box}
@@ -89,7 +89,7 @@
 <body>
 <div id="app">
   <header>
-    <h1>HOLODECK</h1>
+    <h1>PHONODECK</h1>
     <span id="advName"></span>
     <button id="moreTime" class="mini" style="display:none" title="Having fun? Add 10 minutes to this session">+10 min</button>
     <button id="menuBtn">Menu</button>
@@ -266,8 +266,8 @@
 <!-- START SCREEN -->
 <div id="start" class="overlay on"><div class="box">
   <button id="closeStart" style="display:none;float:right">&#10005; Back to adventure</button>
-  <h1>HOLODECK</h1>
-  <p class="tag">Your story, your vibe. Everything is remembered.</p>
+  <h1>PHONODECK</h1>
+  <p class="tag">The precursor to the holodeck. Your story, your vibe. Everything is remembered.</p>
   <button class="big primary" id="newExpBtn">Set up a new experience<small>A few quick questions: your time, the feeling you want, a little about you, and the world</small></button>
   <button class="big" id="contBtn">Continue an experience<small id="contSub">Pick up where you left off</small></button>
   <div id="contList" style="display:none"></div>
@@ -276,7 +276,7 @@
 
 <!-- FIRST-RUN WELCOME -->
 <div id="welcome" class="overlay"><div class="box">
-  <h1>WELCOME TO THE HOLODECK</h1>
+  <h1>WELCOME TO THE PHONODECK</h1>
   <p>An AI Game Master runs a story made just for you. Answer a few quick questions (how much time you have, the feeling you want, your name and age, then either a quick description or a deeper set-up with a photo), then play by typing or talking. It remembers everything, keeps an eye on the clock, lands a real ending and grades the result.</p>
   <h3>SET UP IN ABOUT A MINUTE</h3>
   <ol><li>Get a Gemini API key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--accent)">aistudio.google.com/apikey</a> and set up billing for it (a small prepaid balance works).</li><li>Paste it below.</li><li>Press Start.</li></ol>
@@ -289,13 +289,13 @@
 
 <!-- INVITED GUEST WELCOME (a link ending in ?invite=CODE) -->
 <div id="guestWelcome" class="overlay"><div class="box">
-  <h1>WELCOME TO THE HOLODECK</h1>
+  <h1>WELCOME TO THE PHONODECK</h1>
   <p id="gwHello">You have been invited to play.</p>
   <p>An AI Game Master tells a story made just for you, and you answer by talking or typing. There is nothing to set up.</p>
   <h3>BEFORE YOU START</h3>
   <ol>
     <li><b>Turn your sound on.</b> A narrator reads the story aloud, so turn the volume up. On an iPhone or iPad, also make sure Silent Mode is off (in Control Center, the bell should not be crossed out).</li>
-    <li><b>Try hands-free.</b> Tap <b>&#127911; Hands-free</b> next to Send, then just talk. When you have finished, say <b>"make it so"</b> and the holodeck answers.</li>
+    <li><b>Try hands-free.</b> Tap <b>&#127911; Hands-free</b> next to Send, then just talk. When you have finished, say <b>"make it so"</b> and the phonodeck answers.</li>
     <li><b>Allow the microphone</b> when your browser asks, so hands-free can hear you. You can do it now:</li>
   </ol>
   <button class="big" id="gwMic">Allow the microphone<small>Your browser asks once</small></button>
@@ -330,7 +330,7 @@
     <div id="meRomanceRow"><div class="tag">Romance (optional, adults only)</div><div class="row"><input id="meRomance" placeholder="I am a ... who is interested in ..." autocomplete="off"></div></div>
   </div>
   <div id="curDepth" style="display:none">
-    <button class="big" id="depQuick">Quick start<small>Describe what you want in a sentence or two. The holodeck fills in the rest as best it can, and the game begins.</small></button>
+    <button class="big" id="depQuick">Quick start<small>Describe what you want in a sentence or two. The phonodeck fills in the rest as best it can, and the game begins.</small></button>
     <button class="big" id="depDeep">Deep set-up<small>A carefully curated experience: optionally upload a photo to paint the world from, then a few more questions, with suggestions tailored to what you have told me.</small></button>
   </div>
   <textarea id="curA" placeholder="Type your own answer, or tap options above..."></textarea>
@@ -502,7 +502,7 @@ const storyModel = () => guest() ? GEMINI.model : S().freeTier ? cheapModel() : 
 const headers = () => guest() ? { 'Content-Type': 'application/json', 'x-invite': inviteCode() } : { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + S().key };
 const apiUrl = p => guest() ? '/api/gemini?p=' + p : GEMINI.base + (p === 'chat' ? '/chat/completions' : '/embeddings');   // guests go through the invite server
 function netFetch(url, opts) {   // an unreachable endpoint throws a bare "Failed to fetch"; say what probably happened
-  return fetch(url, opts).then(r => { if (guest()) inviteNote(r); return r; }, e => { throw new Error('Could not reach ' + (guest() ? 'the holodeck server' : 'Google') + ' (' + e.message + '). Check your internet connection.'); });
+  return fetch(url, opts).then(r => { if (guest()) inviteNote(r); return r; }, e => { throw new Error('Could not reach ' + (guest() ? 'the phonodeck server' : 'Google') + ' (' + e.message + '). Check your internet connection.'); });
 }
 // One request. o: { stream, effort (thinking), usage (ask for token counts in the stream), kind (the call's tag; the invite server refuses new story turns once an allowance is used) }
 function llmFetch(model, messages, o) {
@@ -1686,7 +1686,7 @@ const QUESTIONS = [
   { id: 'time', single: true, q: 'How much time do you have?', h: 'You play by the clock, not by turns. The Game Master keeps an eye on the time and lands a proper ending before it runs out, then you get a report card. 10-15 minutes makes a quick short story.', c: ['10 minutes (a quick story)', '20 minutes', '30 minutes', '45 minutes', '1 hour', '2 hours (an epic)'], ph: 'Or type your own, e.g. 25 minutes' },
   { id: 'feeling', q: 'What feeling do you want to come away with?', h: 'This is the Game Master\'s main goal: everything bends toward it. Pick one or two, or describe it in your own words. Wait a moment and more ideas appear.', c: FEELINGS, ph: 'e.g. the cosy feeling of a snow day with nowhere to be' },
   { id: 'mode', single: true, q: 'How do you want to play?', h: 'Curated story: a hidden plot with a beginning, middle and end, which bends (or waits) when you are happy elsewhere. Experience simulator: no plot points at all, just a richly painted world, your own goal and the feeling.', c: ['Curated story (a plot that bends to you)', 'Experience simulator (no plot, just the world and the feeling)'] },
-  { id: 'photo', photo: true, q: 'Paint the world from a photo?', h: 'Optional. A picture is worth a thousand words: the holodeck works out the place, the time and the people, writes the world from them, and fills in the remaining questions for you. Add a caption if you like.', c: [], ph: 'Optional caption: who or where is this? e.g. "Me and Dana in Lisbon, summer 2019"' },
+  { id: 'photo', photo: true, q: 'Paint the world from a photo?', h: 'Optional. A picture is worth a thousand words: the phonodeck works out the place, the time and the people, writes the world from them, and fills in the remaining questions for you. Add a caption if you like.', c: [], ph: 'Optional caption: who or where is this? e.g. "Me and Dana in Lisbon, summer 2019"' },
   { id: 'goal', q: 'What do you want to do there?', h: 'Your goal for this experience. The Game Master helps you do it, with no plot getting in the way. You can change your mind once you are there.', c: ['Explore every corner', 'Spend time with someone special', 'Learn a craft from a local', 'Eat my way through the place', 'Do absolutely nothing', 'Throw a party'],
     ck: ['Explore every corner', 'Make friends with the animals', 'Build something amazing', 'Find all the secret places', 'Have a feast', 'Learn some magic'], ph: 'e.g. Spend an evening in Ten Forward swapping stories with Guinan' },
   { id: 'world', q: 'What kind of world do you want to step into?', h: 'Genre and setting.', c: ['Noir detective', 'Space opera', 'High fantasy', 'Cyberpunk', 'Cozy mystery', 'Gothic horror', 'Wild West', 'Post-apocalypse', 'Pirate seas', 'Historical', 'Superhero', 'Surprise me'],
@@ -1890,7 +1890,7 @@ $('photoFile').onchange = async e => {
     const url = URL.createObjectURL(file), img = new Image();
     await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('This browser could not open that image. Try a JPEG or PNG.')); img.src = url; });
     cur.photo = { name: file.name, full: shrinkImage(img, 1280, 0.85), thumb: shrinkImage(img, 360, 0.7) }; URL.revokeObjectURL(url);
-    $('curMsg').textContent = 'Press "Study my photo" and the holodeck will read the place, the time and the people.'; showPhoto(); curNextLabel();
+    $('curMsg').textContent = 'Press "Study my photo" and the phonodeck will read the place, the time and the people.'; showPhoto(); curNextLabel();
   } catch (err) { $('curMsg').textContent = err.message; }
 };
 async function readPhoto() {   // returns false if it failed (you stay on the photo step)
@@ -2036,7 +2036,7 @@ function finalMessages(a) {
 async function finishAdventure() {
   const name = db.current, a = A(); if (!a || a.result || a.finishing) return;
   a.finishing = true; handsActive = false; try { rec.abort(); } catch (e) {} setHandsUI(); keepAwake(false);
-  const note = addMsg('sys', 'The adventure is complete. The holodeck is preparing your report card...');
+  const note = addMsg('sys', 'The adventure is complete. The phonodeck is preparing your report card...');
   try {
     await memoryJob; await slowJob;
     a.result = parseJson(await chat('final', finalMessages(a)));
@@ -2049,7 +2049,7 @@ function showFinale(a) {
   if (a.result && a.result.holodeck) {   // the two-grade report card
     const r = a.result, card = (t, g) => '<h3>' + t + '</h3><div class="card"><span class="grade">' + esc(g.grade || '?') + '</span> <span class="tag">' + esc(g.score != null ? g.score + '/100' : '') + '</span><p>' + esc(g.comment || '') + '</p></div>';
     $('finaleBody').innerHTML = '<div class="tag">ADVENTURE COMPLETE</div><h1>' + esc(r.title || db.current) + '</h1><p>' + esc(r.summary || '') + '</p>' +
-      card('HOW THE HOLODECK DID <span class="tag">(the feeling: ' + esc(feelingOf(a)) + (isSim(a) ? '; your goal: ' + esc(goalOf(a)) : '') + ')</span>', r.holodeck) + card('HOW YOU DID', r.player || {});
+      card('HOW THE PHONODECK DID <span class="tag">(the feeling: ' + esc(feelingOf(a)) + (isSim(a) ? '; your goal: ' + esc(goalOf(a)) : '') + ')</span>', r.holodeck) + card('HOW YOU DID', r.player || {});
     $('finale').classList.add('on'); return;
   }
   const r = a.result || {}, s = r.story || {}, p = r.player || {}, f = p.followed || {}, j = p.judgement || {}, rv = r.roadmap_review || [];
@@ -2256,7 +2256,7 @@ window.addEventListener('resize', fitBible);
 function syncBibleBox() {
   const a = A(); if (document.activeElement !== $('bibleEdit') && !bibleDirty) $('bibleEdit').value = a ? a.bible : ''; fitBible();
   $('biblePhoto').innerHTML = a && a.photo && a.photo.thumb ? '<img src="' + a.photo.thumb + '" alt="" style="max-width:100%;max-height:200px;border-radius:8px"><p class="tag">This world was painted from your photo (' + esc([a.photo.place, a.photo.era].filter(Boolean).join(', ')) + ').</p>' +
-    (a.photo.canvas ? '<details class="tag" style="margin-bottom:10px"><summary>What the holodeck saw in it</summary><p style="white-space:pre-wrap">' + esc(a.photo.canvas) + '</p></details>' : '') : '';
+    (a.photo.canvas ? '<details class="tag" style="margin-bottom:10px"><summary>What the phonodeck saw in it</summary><p style="white-space:pre-wrap">' + esc(a.photo.canvas) + '</p></details>' : '') : '';
 }
 // Saves any unsaved bible or lore edit. Called on Send, tab changes and adventure switches, because iPad Safari often does not fire
 // "blur" when you tap a button, and an open lore form (which has its own Save button) was silently dropped.
@@ -2302,8 +2302,8 @@ async function send() {
     : 'Begin the adventure. Write a cinematic opening of 150-250 words that drops the player into a vivid moment already in motion, rich in sensory detail and atmosphere, honoring the Player\'s Wishes and the bible, and setting up the FEELING TO ACHIEVE from the first lines. Introduce one or two characters with distinct voices and wants of their own, include a touch of specific humour, and end on an unresolved hook. Do not end with a list of options.';
   else addMsg('pl', text);
   $('input').value = '';
-  const wait = addMsg('sys', 'The holodeck is thinking...');
-  const t0 = Date.now(), waitTimer = setInterval(() => { wait.textContent = 'The holodeck is thinking... ' + Math.round((Date.now() - t0) / 1000) + 's (' + holoStage + ')'; }, 1000);
+  const wait = addMsg('sys', 'The phonodeck is thinking...');
+  const t0 = Date.now(), waitTimer = setInterval(() => { wait.textContent = 'The phonodeck is thinking... ' + Math.round((Date.now() - t0) / 1000) + 's (' + holoStage + ')'; }, 1000);
   const stopWait = () => clearInterval(waitTimer);
   const speaker = (S().speak && (TTS || useGemini())) ? makeSpeaker(() => { stopAmbient(); if (handsActive) setTimeout(listen, 300); }) : null;
   let bubble = null, streamed = '';
@@ -2379,7 +2379,7 @@ function loadSettings() {
 $('expBtn').onclick = () => {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([JSON.stringify({ adventures: db.adventures, current: db.current }, null, 1)], { type: 'application/json' }));
-  a.download = 'holodeck-backup-' + new Date().toISOString().slice(0, 10) + '.json'; a.click();
+  a.download = 'phonodeck-backup-' + new Date().toISOString().slice(0, 10) + '.json'; a.click();
 };
 $('impBtn').onclick = () => $('impFile').click();
 $('impFile').onchange = async e => {
