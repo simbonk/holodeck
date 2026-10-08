@@ -48,6 +48,29 @@ No key yet? Choose **Try the offline demo** to look around with a fake Game Mast
 
 **Narrator voice quota:** by default the app makes one voice request per reply (the voice starts once the reply is written), so a daily limit such as ~100 voice requests lasts about 100 replies. *Settings > Voice & sound* trades more requests for a quicker start.
 
+## Invite friends on your key (optional)
+
+If the game is hosted on Vercel, you can let a few people play on your Gemini key without ever seeing it. Each person gets a link with a dollar allowance, which the game shows them as minutes. Their stories stay in their own browser; the server only counts what each call cost.
+
+### One-time setup in Vercel
+
+1. Open the holodeck project in Vercel, go to **Storage**, and add a free **Upstash for Redis** database, connected to this project. It adds the storage variables by itself.
+2. In **Settings > Environment Variables**, add:
+   - `GEMINI_KEY`: your Gemini API key (billing set up).
+   - `ADMIN_PASSWORD`: a password for the invites page.
+   - `MONTHLY_CAP` (optional): the most all guests together may spend in a month, in dollars. The default is 30.
+3. Redeploy (Deployments > the latest one > Redeploy).
+
+### Adding someone
+
+Open `holodeck-optimized.html?admin` on your site and enter the admin password. Type a name and an allowance (about 10 cents buys a minute of play, so $3 is roughly 30 minutes) and press **Create invite**, then copy the link and send it. The same page shows what each guest has used, and lets you add more, pause, resume or delete an invite.
+
+To change the Gemini key later, edit `GEMINI_KEY` in Vercel and redeploy. Invites are not affected.
+
+### How it works
+
+The `api` folder holds three small Vercel functions with no dependencies. `api/gemini.js` forwards a guest's calls to Google with your key and charges each call to their invite at Google's prices (listed in `api/_lib.js`). It accepts only the game's own models. `api/admin.js` runs the invites page, and `api/invite.js` tells the game how much a guest has left. A guest who adds their own key in Settings plays on that key instead.
+
 ## Privacy and cost
 - There is no server. Your key and adventures live in your browser's storage (plus an optional folder you choose). The key is sent only to Google, and is never written to adventure files.
 - Do not enter your key on a shared computer. Use a key with a low spending cap.

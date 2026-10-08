@@ -36,6 +36,8 @@
   /* overlays */
   .overlay{position:fixed;inset:0;background:var(--bg);z-index:10;overflow:auto;display:none;padding:24px 16px}
   .overlay.on{display:block}
+  body.guest .hostOnly{display:none!important} .guestOnly{display:none} body.guest .guestOnly{display:block}
+  .adm{width:100%;border-collapse:collapse;font-size:13px} .adm td,.adm th{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left;vertical-align:top} .adm button{padding:3px 8px;margin:1px}
   .box{max-width:640px;margin:0 auto}
   .box h1{color:var(--accent);letter-spacing:.12em;margin:10px 0 4px}
   .big{display:block;width:100%;text-align:left;padding:16px;margin:12px 0;font-size:18px}
@@ -113,7 +115,7 @@
       <p class="warn" id="originWarn" style="display:none"></p>
       <div class="subnav" id="subnav">
         <button data-p="conn" class="on">Connection</button>
-        <button data-p="story">Story &amp; cost</button>
+        <button data-p="story" class="hostOnly">Story &amp; cost</button>
         <button data-p="voice">Voice &amp; sound</button>
         <button data-p="me">Personal details</button>
         <button data-p="data">Data</button>
@@ -122,13 +124,14 @@
       <section class="sp on" data-p="conn">
         <div class="grp">
           <b>GOOGLE GEMINI</b>
+          <p class="tag guestOnly">You are playing on an invite, so you need nothing here. If you love it and want to keep playing on your own Google billing, you can paste your own Gemini API key below (advanced); it then replaces the invite.</p>
           <label>API key</label>
           <div class="row"><input id="setKey" type="password" placeholder="AIza..." autocomplete="off"></div>
           <div class="warn">Stored only in this browser (localStorage) and sent only to Google. Use a key with a low spending cap, and do not enter it on a shared computer. Get a key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--accent)">aistudio.google.com/apikey</a>.</div>
           <p class="tag" id="keyStatus"></p>
           <p><button id="testConn">Test connection &amp; list models</button> <span class="tag" id="connStatus"></span></p>
         </div>
-        <div class="grp">
+        <div class="grp hostOnly">
           <b>MODELS</b>
           <label>Story model</label>
           <div class="row"><select id="setModel" style="width:100%"></select></div>
@@ -165,7 +168,7 @@
         <div class="grp">
           <b>COST ESTIMATE</b>
           <label>Prices, USD per 1M tokens: story in, story out, cheap in, cheap out, audio out</label>
-          <div class="row"><input id="setPrices" placeholder="2,12,0.5,3,10"></div>
+          <div class="row"><input id="setPrices" placeholder="2,12,0.75,3.75,6"></div>
           <p class="tag">The bar above the message box shows tokens and an estimated cost per turn and per adventure, including input Google served from its cache at a discount. It is only as accurate as these prices, so check them against your Google billing page.</p>
         </div>
       </section>
@@ -182,7 +185,7 @@
           <b>DICTATION</b>
           <label><input type="checkbox" id="setCleanDict" style="width:auto"> Clean up hands-free messages before sending (fixes misheard words and filler using the story's context; one quick cheap-model call)</label>
         </div>
-        <div class="grp">
+        <div class="grp hostOnly">
           <b>GEMINI NARRATOR VOICE</b>
           <label>Narrator voice</label>
           <div class="row"><select id="setTtsVoice" style="width:100%"></select></div>
@@ -284,6 +287,23 @@
   <button id="wSkip">Skip for now</button>
 </div></div>
 
+<!-- INVITED GUEST WELCOME (a link ending in ?invite=CODE) -->
+<div id="guestWelcome" class="overlay"><div class="box">
+  <h1>WELCOME TO THE HOLODECK</h1>
+  <p id="gwHello">You have been invited to play.</p>
+  <p>An AI Game Master tells a story made just for you, and you answer by talking or typing. There is nothing to set up.</p>
+  <h3>BEFORE YOU START</h3>
+  <ol>
+    <li><b>Turn your sound on.</b> A narrator reads the story aloud, so turn the volume up. On an iPhone or iPad, also make sure Silent Mode is off (in Control Center, the bell should not be crossed out).</li>
+    <li><b>Try hands-free.</b> Tap <b>&#127911; Hands-free</b> next to Send, then just talk. When you have finished, say <b>"make it so"</b> and the holodeck answers.</li>
+    <li><b>Allow the microphone</b> when your browser asks, so hands-free can hear you. You can do it now:</li>
+  </ol>
+  <button class="big" id="gwMic">Allow the microphone<small>Your browser asks once</small></button>
+  <p class="tag" id="gwMicStatus"></p>
+  <button class="big primary" id="gwStart">Start<small>A few quick questions, then your story begins</small></button>
+  <p class="tag" id="gwLeft"></p>
+</div></div>
+
 <!-- FINAL REPORT -->
 <div id="finale" class="overlay"><div class="box">
   <button id="closeFinale" style="float:right">&#10005; Close</button>
@@ -325,13 +345,38 @@
   <p class="tag" id="curMsg"></p>
 </div></div>
 
+<!-- INVITE ADMIN (open the game with ?admin; needs the invite server, see the README) -->
+<div id="admin" class="overlay"><div class="box">
+  <button id="admClose" style="float:right">&#10005; Close</button>
+  <h1>INVITES</h1>
+  <div id="admLogin">
+    <label>Admin password</label>
+    <div class="row"><input id="admPass" type="password" autocomplete="current-password"></div>
+    <button class="primary" id="admGo">Open</button>
+  </div>
+  <div id="admMain" style="display:none">
+    <div class="grp">
+      <b>ADD SOMEONE</b>
+      <label>Name</label>
+      <div class="row"><input id="admName" placeholder="e.g. Mom" autocomplete="off"></div>
+      <label>Allowance in dollars (about 10 cents buys a minute of play, so $3 is roughly 30 minutes)</label>
+      <div class="row"><input id="admAllow" type="number" min="0.5" step="0.5" value="3"></div>
+      <button class="primary" id="admCreate">Create invite</button>
+      <div id="admLink"></div>
+    </div>
+    <div id="admList"></div>
+    <p class="tag" id="admTotals"></p>
+  </div>
+  <p class="tag" id="admMsg"></p>
+</div></div>
+
 <script>
 const $ = id => document.getElementById(id);
 const KEY = 'holodeck.v2';
 // Google Gemini through its OpenAI-compatible endpoint. "Test connection" lists the models a key can really use and swaps in available ones if a default is missing.
 const GEMINI = { base: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-3.1-pro-preview', cheap: 'gemini-3.8-flash', embed: 'gemini-embedding-2-preview',
-  models: ['gemini-3.1-pro-preview', 'gemini-3.8-flash'], ttsModel: 'gemini-3.8-flash-lite-tts', ttsBackup: 'gemini-3.8-flash-tts', cheapLite: 'gemini-3.1-flash-lite', prices: '2,12,0.5,3,10',
-  cacheRate: 0.25 };   // cached input is billed at about this fraction of the normal input price (an estimate)
+  models: ['gemini-3.1-pro-preview', 'gemini-3.8-flash'], ttsModel: 'gemini-3.8-flash-lite-tts', ttsBackup: 'gemini-3.8-flash-tts', cheapLite: 'gemini-3.1-flash-lite', prices: '2,12,0.75,3.75,6',   // Google's paid prices, Oct 2026 (the 3.8 models double on Jan 1, 2027)
+  cacheRate: 0.1 };   // Google bills input served from its cache at a tenth of the normal input price
 const RETIRED = { model: ['gemini-2.5-pro'], cheap: ['gemini-2.5-flash'], embed: ['gemini-embedding-001'] };   // saved values matching these are upgraded to the new defaults
 const BIBLE_EVERY = 10;
 // Tunable prompt sizes (Settings > Story & cost). Smaller = cheaper and faster; larger = more continuity in the prompt.
@@ -350,6 +395,38 @@ Object.keys(RETIRED).forEach(k => { if (RETIRED[k].includes(db.settings[k])) db.
 let busy = false;
 const S = () => db.settings;
 const A = () => db.adventures[db.current];
+// ---------------- Invites: a guest plays on the host's Gemini key through the invite server (the api folder, on Vercel) ----------------
+// A link ending in ?invite=CODE stores the code in this browser. Guests never see a key, get the default models and voice, and spend a
+// dollar allowance that the game shows as minutes. A key of your own (Settings > Connection) always wins over an invite.
+const INVITE_KEY = 'holodeck.invite';
+(function takeInvite() {
+  const q = new URLSearchParams(location.search), c = q.get('invite'); if (!c) return;
+  try { localStorage.setItem(INVITE_KEY, c.trim().toUpperCase()); } catch (e) {}
+  q.delete('invite'); history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash);   // keeps the code out of bookmarks
+})();
+const inviteCode = () => { try { return localStorage.getItem(INVITE_KEY) || ''; } catch (e) { return ''; } };
+const guest = () => !!inviteCode() && !S().key && !S().fake;
+const hasKey = () => !!S().key || guest();
+let inviteInfo = null;   // { name, minutesLeft, status } from the invite server
+const QUOTA_MSG = 'Your current invite quota is complete. Thank you for playing! If you would like more time, ask the person who invited you.';
+const INVITE_OFF_MSG = 'This invite is not active right now. Ask the person who invited you for a new link.';
+const inviteLine = () => !inviteInfo ? '' : inviteInfo.status !== 'active' ? INVITE_OFF_MSG : inviteInfo.minutesLeft > 0 ? 'About ' + inviteInfo.minutesLeft + ' minute' + (inviteInfo.minutesLeft === 1 ? '' : 's') + ' left on your invite' : 'Your current invite quota is complete.';
+function inviteNote(r) {   // every answer from the invite server says about how many minutes are left
+  const m = r.headers.get('x-invite-minutes'); if (m !== null && inviteInfo && inviteInfo.status === 'active') { inviteInfo.minutesLeft = +m; showUsage(); }
+}
+async function inviteError(r) {   // 402: the allowance, the invite or the monthly ceiling is used up; 403: the code is not valid
+  let o = {}; try { o = await r.json(); } catch (e) {}
+  const off = r.status === 403 || o.reason === 'paused';
+  if (inviteInfo) { if (off) inviteInfo.status = 'off'; else inviteInfo.minutesLeft = 0; showUsage(); }
+  const e = new Error(off ? INVITE_OFF_MSG : QUOTA_MSG); e.quota = true; return e;
+}
+async function loadInvite() {
+  if (!guest()) return;
+  try { const r = await fetch('/api/invite?code=' + encodeURIComponent(inviteCode()), { cache: 'no-store' });
+    inviteInfo = r.ok ? await r.json() : r.status === 403 ? { status: 'off', minutesLeft: 0 } : null;
+  } catch (e) { inviteInfo = null; }
+  showUsage(); guestWelcomeText();
+}
 const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*(.+?)\*/g, '<i>$1</i>');
 const norm = a => { a.places = a.places || {}; a.edges = a.edges || []; a.beats = a.beats || []; a.events = a.events || []; a.lore = a.lore || {}; a.transcript = a.transcript || []; a.location = a.location || ''; a.chunks = a.chunks || []; a.emb = a.emb || {}; a.summarizedUpTo = a.summarizedUpTo || 0; return a; };
@@ -412,6 +489,7 @@ $('reconBtn').onclick = async () => {
 
 // ---------------- LLM ----------------
 async function llmError(r, what) {   // plain-English explanation for the most common failures
+  if (guest() && (r.status === 402 || r.status === 403)) return inviteError(r);
   const body = (await r.text()).slice(0, 250), hint = {
     400: 'The request was rejected.', 401: 'The API key was not accepted. Check it in Settings > Connection.', 403: 'The key is not allowed to use "' + what + '". Press Test connection in Settings > Connection.',
     404: '"' + what + '" was not found (preview models get renamed or retired). Press Test connection in Settings > Connection and pick an available model.',
@@ -419,19 +497,21 @@ async function llmError(r, what) {   // plain-English explanation for the most c
     503: 'Google\'s service is busy right now. Wait a moment and try again.' }[r.status];
   return new Error((hint ? hint + ' (HTTP ' + r.status + ') ' : 'LLM error ' + r.status + ': ') + body);
 }
-const cheapModel = () => S().cheap || GEMINI.cheap;
-const storyModel = () => S().freeTier ? cheapModel() : (S().model || GEMINI.model);
-const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + S().key });
+const cheapModel = () => guest() ? GEMINI.cheap : S().cheap || GEMINI.cheap;   // guests always get the default models
+const storyModel = () => guest() ? GEMINI.model : S().freeTier ? cheapModel() : (S().model || GEMINI.model);
+const headers = () => guest() ? { 'Content-Type': 'application/json', 'x-invite': inviteCode() } : { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + S().key };
+const apiUrl = p => guest() ? '/api/gemini?p=' + p : GEMINI.base + (p === 'chat' ? '/chat/completions' : '/embeddings');   // guests go through the invite server
 function netFetch(url, opts) {   // an unreachable endpoint throws a bare "Failed to fetch"; say what probably happened
-  return fetch(url, opts).catch(e => { throw new Error('Could not reach Google (' + e.message + '). Check your internet connection.'); });
+  return fetch(url, opts).then(r => { if (guest()) inviteNote(r); return r; }, e => { throw new Error('Could not reach ' + (guest() ? 'the holodeck server' : 'Google') + ' (' + e.message + '). Check your internet connection.'); });
 }
-// One request. o: { stream, effort (thinking), usage (ask for token counts in the stream) }
+// One request. o: { stream, effort (thinking), usage (ask for token counts in the stream), kind (the call's tag; the invite server refuses new story turns once an allowance is used) }
 function llmFetch(model, messages, o) {
   const body = { model, messages };
   if (o.stream) body.stream = true;
   if (o.effort) body.reasoning_effort = o.effort;
   if (o.stream && o.usage) body.stream_options = { include_usage: true };
-  return netFetch(GEMINI.base + '/chat/completions', { method: 'POST', headers: headers(), body: JSON.stringify(body) });
+  const h = headers(); if (guest() && o.kind) h['x-holo-kind'] = o.kind;
+  return netFetch(apiUrl('chat'), { method: 'POST', headers: h, body: JSON.stringify(body) });
 }
 // Tries the richest request first, then plainer ones if the endpoint rejects a parameter (HTTP 400). Rejected shapes are remembered for the session.
 const badShape = new Set();
@@ -483,10 +563,10 @@ async function probeTier() {   // one tiny request to the story model; returns a
 }
 async function chat(tag, messages) {
   if (S().fake) return fake(tag, messages);
-  if (!S().key) throw new Error('Set your API key in Settings (or enable offline test mode).');
-  const bigModel = tag === 'gm' || tag === 'final' || tag === 'photo' || (tag === 'plan' && S().notesModel === 'story');   // GM notes run on the cheap model unless Settings says otherwise
+  if (!hasKey()) throw new Error('Set your API key in Settings (or enable offline test mode).');
+  const bigModel = tag === 'gm' || tag === 'final' || tag === 'photo' || (tag === 'plan' && S().notesModel === 'story' && !guest());   // GM notes run on the cheap model unless Settings says otherwise
   const eff = tag === 'gm' ? '' : tag === 'plan' || tag === 'final' || tag === 'photo' ? 'low' : 'minimal';   // background calls do not need deep thinking
-  const variants = eff ? [{ effort: eff }, {}] : [{}];
+  const variants = (eff ? [{ effort: eff }, {}] : [{}]).map(v => Object.assign(v, { kind: tag }));
   let { r, model } = await quotaRetry(bigModel ? storyModel() : cheapModel(), bigModel, m => tryVariants(m, variants, messages));
   // The cheap model is out of quota or unavailable: background calls (suggestions, memory) borrow the story model rather than fail silently.
   if (!r.ok && !bigModel && [404, 429, 503].includes(r.status) && storyModel() !== model) { console.warn('cheap model "' + model + '" answered HTTP ' + r.status + '; using the story model for "' + tag + '"'); model = storyModel(); r = await tryVariants(model, variants, messages); }
@@ -518,7 +598,8 @@ function usageCost(u) {   // returns { total, story, bg, voice } in dollars
 let usageBase = null;   // snapshot of the adventure's usage when you last pressed Send
 const kfmt = n => n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(Math.round(n));
 function showUsage() {
-  const a = A(), el = $('usageBar'); if (!a || !a.usage || !el) { if (el) el.textContent = ''; return; }
+  const a = A(), el = $('usageBar'); if (el && guest()) { el.textContent = inviteLine(); el.title = 'An estimate: what is left on your invite, at the pace you have been playing.'; return; }
+  if (!a || !a.usage || !el) { if (el) el.textContent = ''; return; }
   const u = a.usage, tot = usageCost(u); if (!usageBase || usageBase.__adv !== db.current) usageBase = Object.assign(JSON.parse(JSON.stringify(u)), { __adv: db.current });
   const b = usageBase, g = u.gm || { i: 0, o: 0, th: 0 }, g0 = b.gm || { i: 0, o: 0, th: 0 };
   const dn = Object.keys(u).reduce((o, k) => { const x = u[k], y = b[k] || { i: 0, o: 0, th: 0, s: 0, n: 0, c: 0, big: x.big }; o[k] = { i: x.i - y.i, o: x.o - y.o, th: x.th - y.th, s: x.s - y.s, n: x.n - y.n, c: (x.c || 0) - (y.c || 0), big: x.big }; return o; }, {});
@@ -535,9 +616,9 @@ async function chatStream(messages, onDelta) {
     for (const w of (t.match(/\S+\s*/g) || [t])) { onDelta(w); await new Promise(r => setTimeout(r, 12)); }
     return t;
   }
-  if (!S().key) throw new Error('Set your API key in Settings (or enable offline test mode).');
-  const effort = S().effort === undefined ? 'low' : S().effort;   // thinking is billed as output; low effort cuts cost and the wait for the first word
-  const variants = [[effort, true], [effort === 'minimal' ? 'low' : effort, true], [effort, false], ['', false]].map(([e, u]) => ({ stream: true, effort: e, usage: u }));
+  if (!hasKey()) throw new Error('Set your API key in Settings (or enable offline test mode).');
+  const effort = guest() || S().effort === undefined ? 'low' : S().effort;   // thinking is billed as output; low effort cuts cost and the wait for the first word
+  const variants = [[effort, true], [effort === 'minimal' ? 'low' : effort, true], [effort, false], ['', false]].map(([e, u]) => ({ stream: true, effort: e, usage: u, kind: 'gm' }));
   const { r, model } = await quotaRetry(storyModel(), true, m => tryVariants(m, variants, messages));
   if (!r.ok) throw await llmError(r, model);
   const big = !S().freeTier;
@@ -865,16 +946,16 @@ function wishesSection(a) {
 
 // ---------------- Embeddings + hybrid recall ----------------
 let embedOff = false;                                   // set for the session if the endpoint rejects embeddings
-const embedModel = () => S().embed !== undefined ? S().embed : GEMINI.embed;
+const embedModel = () => guest() ? GEMINI.embed : S().embed !== undefined ? S().embed : GEMINI.embed;
 const embOn = () => !embedOff && !S().noEmbed && (!!S().fake || !!embedModel());
 function hstr(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
 function quant(v) { const n = Math.sqrt(v.reduce((s, x) => s + x * x, 0)) || 1; return v.map(x => Math.round(x / n * 127)); }   // int8-ish, keeps storage small
 function fakeEmb(t) { const v = new Array(64).fill(0); tok(t).forEach(w => v[Math.abs(hstr(w)) % 64]++); return quant(v); }
 async function embed(texts) {
   if (S().fake) return texts.map(fakeEmb);
-  if (!S().key) throw new Error('no API key');
+  if (!hasKey()) throw new Error('no API key');
   const model = embedModel(); if (!model) throw new Error('no embedding model');
-  const r = await netFetch(GEMINI.base + '/embeddings', { method: 'POST', headers: headers(), body: JSON.stringify({ model, input: texts }) });
+  const r = await netFetch(apiUrl('embed'), { method: 'POST', headers: headers(), body: JSON.stringify({ model, input: texts }) });
   if (!r.ok) throw new Error('embeddings HTTP ' + r.status);
   return (await r.json()).data.map(d => quant(d.embedding.slice(0, 256)));   // truncate long vectors (e.g. Gemini's 3072 dims) to keep storage small
 }
@@ -1137,7 +1218,7 @@ $('lore').onclick = e => {
 async function recap() {
   const a = A(), name = db.current; if (!a || !a.transcript.length) return;
   let text = 'Previously: ' + (a.events.slice(-3).map(e => e.replace(/^T\d+:\s*/, '')).join(' ') || 'the story is just beginning.') + (a.location ? ' You are at ' + a.location + '.' : '');
-  if (S().fake || S().key) {
+  if (S().fake || hasKey()) {
     try {
       text = await chat('bible', [
         { role: 'system', content: 'Write a 3-4 sentence "previously on your adventure" recap for a returning player of a text adventure. Second person, evocative, ending with where they are and the open situation. Output only the recap.' },
@@ -1199,7 +1280,7 @@ const DEFAULT_TTS_STYLE = 'Narrate like a gifted audiobook reader telling an imm
 const GEMINI_VOICES = ['Achernar','Achird','Algenib','Algieba','Alnilam','Aoede','Autonoe','Callirrhoe','Charon','Despina','Enceladus','Erinome','Fenrir','Gacrux','Iapetus','Kore','Laomedeia','Leda','Orus','Pulcherrima','Puck','Rasalgethi','Sadachbia','Sadaltager','Schedar','Sulafat','Umbriel','Vindemiatrix','Zephyr','Zubenelgenubi'];
 const DEFAULT_TTS_VOICE = 'Sulafat';
 let activeGemini = null, geminiWarned = false, geminiBlocked = false, ttsBackupNow = false;   // ttsBackupNow: the chosen voice model hit its daily quota, so use the other one until reload or Test voice
-const useGemini = () => (S().ttsEngine || 'gemini') === 'gemini' && !!S().key && !S().fake && !geminiBlocked;   // geminiBlocked: quota hit (HTTP 429), so stay on the browser voice until reload or Test voice
+const useGemini = () => (S().ttsEngine || 'gemini') === 'gemini' && hasKey() && !S().fake && !geminiBlocked;   // geminiBlocked: quota hit (HTTP 429), so stay on the browser voice until reload or Test voice
 function stopSpeech() { blockedPlay = null; talkUntil = 0; if (TTS) speechSynthesis.cancel(); if (activeGemini) { activeGemini.stop(); activeGemini = null; } }
 // iPhone/iPad Safari only lets a page start sound from a tap. A fresh new Audio() per clip, played seconds later when the API answers,
 // is refused. Instead, one shared <audio> element is unlocked by your first tap and reused for every clip, which Safari then allows.
@@ -1234,7 +1315,7 @@ function wavFromPcm(pcm, rate) {   // raw 16-bit mono PCM -> WAV, in case the AP
 }
 const ttsCache = new Map();   // voice+model+style+text -> audio URL; replaying a message costs nothing while the page stays open
 async function geminiTTS(text) {
-  const chosen = S().ttsModel || GEMINI.ttsModel, voice = (A() && A().ttsVoice) || S().ttsVoice || DEFAULT_TTS_VOICE, backup = chosen === GEMINI.ttsModel ? GEMINI.ttsBackup : GEMINI.ttsModel, model = ttsBackupNow ? backup : chosen, style = S().ttsStyle || DEFAULT_TTS_STYLE, ck = [voice, model, style, text].join('\u0001');
+  const chosen = (!guest() && S().ttsModel) || GEMINI.ttsModel, voice = (A() && A().ttsVoice) || (!guest() && S().ttsVoice) || DEFAULT_TTS_VOICE, backup = chosen === GEMINI.ttsModel ? GEMINI.ttsBackup : GEMINI.ttsModel, model = ttsBackupNow ? backup : chosen, style = S().ttsStyle || DEFAULT_TTS_STYLE, ck = [voice, model, style, text].join('\u0001');
   if (ttsCache.has(ck)) return ttsCache.get(ck);
   const body = {
     model,
@@ -1242,8 +1323,10 @@ async function geminiTTS(text) {
     response_format: { type: 'audio' },
     generation_config: { speech_config: [{ voice }] }
   };
-  const r = await netFetch(GEMINI_HOST + '/interactions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': S().key }, body: JSON.stringify(body) });
+  const r = guest() ? await netFetch('/api/gemini?p=tts', { method: 'POST', headers: headers(), body: JSON.stringify(body) })
+    : await netFetch(GEMINI_HOST + '/interactions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': S().key }, body: JSON.stringify(body) });
   if (!r.ok) {
+    if (guest() && (r.status === 402 || r.status === 403)) { geminiBlocked = true; throw await inviteError(r); }
     const body = (await r.text()).slice(0, 200);
     // Quotas are per model, so when the chosen voice model runs out, switch to the other one (its own daily allowance) before giving up on Gemini.
     if (r.status === 429 && !ttsBackupNow) { ttsBackupNow = true; console.warn('Voice quota hit on ' + model + '; switching to ' + backup);
@@ -1263,10 +1346,10 @@ async function geminiTTS(text) {
 // request once it is complete (fewest requests, slower start); "two" sends a short first piece, then the rest. Otherwise chunk sizes GROW:
 // a short first piece (fast start), then each piece ~3x larger up to the cap, each requested as soon as it is complete.
 function makeGeminiSpeaker(done) {
-  const mode = String(S().ttsChunk || '2000');
+  const mode = guest() ? '700' : String(S().ttsChunk || '2000');   // guests: smaller pieces keep each clip under the invite server's 4.5 MB response limit
   let buf = '', pend = '', q = [], ended = false, fired = false, playing = false, next = 0, target = 130, stopped = false, audio = null;
   const clean = t => t.replace(/[*_#>`]/g, '').replace(/\s+/g, ' ').trim();
-  const warn = e => { if (geminiWarned) return; geminiWarned = true; console.warn(e);
+  const warn = e => { if (geminiWarned) return; geminiWarned = true; console.warn(e); if (e.quota) return;   // the story already says the invite is used up
     addMsg('sys', (/HTTP 429/.test(e.message) ? 'The Gemini voice has reached its limit for now, so the device voice reads the story instead.' : 'Gemini voice unavailable (' + String(e.message).slice(0, 140) + '). Using the device voice instead.') + (IOS ? ' ' + SILENT_TIP : '')); };
   function flush() {
     const t = clean(pend); pend = ''; if (!t) return; target = Math.min(target * 3, Math.max(400, +mode || 2000));
@@ -1380,7 +1463,7 @@ $('testVoice').onclick = async () => {
   autoSave(); stopSpeech(); geminiWarned = false; geminiBlocked = false; ttsBackupNow = false; voiceSuspect = false;
   const lines = [], report = (i, t) => { lines[i] = t; diag(lines); };
   if (TTS) { try { const p = new SpeechSynthesisUtterance(' '); p.volume = 0; speechSynthesis.speak(p); } catch (e) {} }   // inside this tap, so the device voice may speak after the Gemini attempt
-  if (S().fake || !S().key || S().ttsEngine === 'browser') { report(0, 'Gemini voice: ' + (S().ttsEngine === 'browser' ? 'switched off in Settings' : 'no API key (or offline test mode)') + ', so only the device voice is tested.'); testDeviceVoice(t => report(1, t)); return; }
+  if (S().fake || !hasKey() || S().ttsEngine === 'browser') { report(0, 'Gemini voice: ' + (S().ttsEngine === 'browser' ? 'switched off in Settings' : 'no API key (or offline test mode)') + ', so only the device voice is tested.'); testDeviceVoice(t => report(1, t)); return; }
   report(0, 'Gemini voice: requesting a clip...');
   try {
     const url = await geminiTTS(TEST_LINE);
@@ -1700,7 +1783,7 @@ const MORE_ROUNDS = { feeling: 3 };   // feelings keep populating: up to 3 round
 const moreDue = id => (cur.rounds[id] || 0) < (MORE_ROUNDS[id] || 1);
 function armMore() {   // (re)start the wait; every interaction restarts it, so it only fires when the player seems stuck
   clearTimeout(moreTimer); const q = curQs()[cur.i];
-  if (!q || !moreDue(q.id) || ['time', 'mode', 'photo', 'length', 'link', 'me', 'depth', 'describe'].includes(q.id) || (S().fake ? false : !S().key)) return;
+  if (!q || !moreDue(q.id) || ['time', 'mode', 'photo', 'length', 'link', 'me', 'depth', 'describe'].includes(q.id) || (S().fake ? false : !hasKey())) return;
   moreTimer = setTimeout(() => moreOptions(q.id), q.id === 'feeling' ? 3500 : MORE_AFTER_MS);
 }
 async function moreOptions(id) {
@@ -1819,7 +1902,7 @@ async function readPhoto() {   // returns false if it failed (you stay on the ph
       canvas: 'You step into the photo. Warm stone under your feet, the clink of glasses, gulls arguing over a dropped chip... (offline demo: a real key writes 700-1000 words here)', lore: [{ name: 'Café Marítimo', type: 'place', aliases: [], desc: 'A harbour café with blue chairs and a cat that owns the place.' }],
       answers: { world: 'Seaside summer', where: 'A harbour café on a warm evening', who: 'The one taking the photo', allies: 'An old friend', vibe: 'Warm, lazy', goal: 'Watch the sunset and stay out late', hook: 'A note is tucked under the sugar bowl' } };
     else {
-      if (!S().key) throw new Error('Studying a photo needs an API key (Settings > Connection), or turn on the offline demo.');
+      if (!hasKey()) throw new Error('Studying a photo needs an API key (Settings > Connection), or turn on the offline demo.');
       o = parseJson(await chat('photo', [{ role: 'system', content: PHOTO_RULES }, { role: 'user', content: [{ type: 'text', text: 'CAPTION FROM THE PLAYER: ' + (caption || '(none)') + '\nPLAY MODE: ' + (cur.answers.mode || 'open') + '\nFEELING THEY WANT: ' + (cur.answers.feeling || 'open') }, { type: 'image_url', image_url: { url: p.full } }] }]));
     }
     if (!o || !o.canvas) throw new Error('The photo description came back empty.');
@@ -1853,7 +1936,7 @@ async function curAdvance() {
   const notCats = QBY.play.c.slice(4).map(s => s.toLowerCase());
   const cats = (isNoPref(cur.answers.play) ? '' : cur.answers.play || '').split(/,\s*/).map(s => s.trim()).filter(s => s && !notCats.includes(s.toLowerCase())).slice(0, 6);   // "surprise me" contains a comma, so drop it whole
   try { await createAdventure(name, answers, cats, cur.src, cur.photo && cur.photo.canvas ? cur.photo : null); }
-  catch (e) { $('curMsg').textContent = 'Error: ' + e.message; busyBtn($('curNext')); curNextLabel(); return; }
+  catch (e) { $('curMsg').textContent = (e.quota ? '' : 'Error: ') + e.message; busyBtn($('curNext')); curNextLabel(); return; }
   busyBtn($('curNext')); curNextLabel();
   $('curator').classList.remove('on'); enterAdventure(name, true);
 }
@@ -1993,7 +2076,7 @@ async function createAdventure(name, answers, cats, srcName, photo) {
   if (photo) a.photo = { thumb: photo.thumb, canvas: photo.canvas, place: photo.place, era: photo.era, caption: photo.caption || '' };
   const sim = isSim(a), est = Math.max(2, Math.round(M * 60 / SEC_PER_TURN));
   let made = null;
-  if (!S().fake && S().key) {
+  if (!S().fake && hasKey()) {
     try {
       const raw = await chat('gm', [{ role: 'system', content: CREATE_RULES + (a.age ? '\n' + ageRules(a) : '') + (M <= 15 ? '\n' + SHORT_CREATE : '') + (sim ? '\n' + SIM_CREATE : '') + (photo ? '\n' + PHOTO_CREATE : '') + (src ? '\n' + SEQUEL_RULES : '') + '\n' + namingBrief(name) },
         { role: 'user', content: (src ? sourceWorld(src, srcName) + '\n\nNEW QUESTIONNAIRE:\n' : '') + txt + (photo ? '\n\nPHOTO CANVAS (place: ' + photo.place + '; time: ' + photo.era + (photo.caption ? '; caption: ' + photo.caption : '') + '):\n' + photo.canvas +
@@ -2187,7 +2270,7 @@ $('bibleEdit').addEventListener('blur', () => { if (bibleDirty) saveBibleNow(); 
 let dictated = false;   // set when a message came from hands-free dictation
 const CLEAN_RULES = `You clean up speech-to-text for a text adventure player. Fix ONLY transcription damage: misheard words and wrong homophones (use the story context to decide, e.g. "insect" is probably "instinct", "Steam Fisher" is probably "steam vent"), garbled character or place names (use the supplied story names), filler words (uh, um, you know), stuttered repeats and abandoned false starts, and punctuation and capitalisation. Keep the player's meaning, first-person voice, order and level of detail exactly; never add, remove or reinterpret ideas, and never answer or continue the story. If the text is already fine, return it unchanged. Output ONLY the corrected text.`;
 async function cleanDictation(text) {
-  if (S().fake || !S().key) return text;
+  if (S().fake || !hasKey()) return text;
   const a = A(), lastGm = [...a.transcript].reverse().find(t => t.role === 'gm');
   try {
     const out = await Promise.race([chat('clean', [{ role: 'system', content: CLEAN_RULES },
@@ -2238,7 +2321,7 @@ async function send() {
   } catch (e) {
     stopWait(); stopAmbient(); wait.remove(); if (bubble && !streamed) bubble.remove();
     if (speaker) speaker.end();
-    addMsg('sys', 'Error: ' + e.message + (first ? ' (press Send to retry)' : ''));
+    addMsg('sys', e.quota ? e.message : 'Error: ' + e.message + (first ? ' (press Send to retry)' : ''));
   }
   busy = false; $('send').disabled = false; renderPanels();
   { const a = A(); if (a && !hidden && !a.result && !a.finishing && isOver(a)) finishAdventure(); }
@@ -2283,6 +2366,7 @@ function loadSettings() {
   if ((S().effortV || 0) < 3) { db.settings.effort = 'low'; db.settings.effortV = 3; }   // one-time: low thinking by default (deep thinking was the biggest cost)
   if ((S().notesV || 0) < 2) { db.settings.notesModel = 'cheap'; db.settings.notesV = 2; }   // one-time: hidden plot notes on the cheap model
   if (S().ttsV !== 1) { db.settings.ttsEngine = 'gemini'; db.settings.speak = true; db.settings.ttsV = 1; }   // one-time: Gemini narrator voice and reading aloud are on by default
+  if (S().prices === '2,12,0.5,3,10') delete db.settings.prices;   // the old default prices: use the corrected ones
   if (S().ttsChunkV !== 3) { db.settings.ttsChunk = '2000'; db.settings.ttsChunkV = 3; if (S().ttsModel === 'gemini-3.8-flash-tts') delete db.settings.ttsModel; }   // one-time: lite voice model, about 3 voice requests per reply
   $('setEffort').value = S().effort === undefined ? 'low' : S().effort;
   $('setTuneRecent').value = tune('recent'); $('setTuneChapters').value = tune('chapters'); $('setTuneRecall').value = tune('recall');
@@ -2316,13 +2400,13 @@ function collectSettings() {   // the browser voice is saved by its own handler 
 }
 function keyStatus() {
   const k = S().key;
-  $('keyStatus').textContent = (k ? 'Key saved (ends in ' + k.slice(-4) + '). ' : 'No key saved yet. ') + 'Story model: ' + (S().model || GEMINI.model) + ' | cheap model: ' + cheapModel() +
+  $('keyStatus').textContent = (k ? 'Key saved (ends in ' + k.slice(-4) + '). ' : guest() ? 'Playing on an invite, so no key is needed. ' : 'No key saved yet. ') + 'Story model: ' + (S().model || GEMINI.model) + ' | cheap model: ' + cheapModel() +
     (S().freeTier ? ' | KEY WITHOUT BILLING: the story uses the cheap model' : '') + (S().fake ? ' | OFFLINE TEST MODE IS ON' : '');
 }
 function autoSave() {
   const old = db.settings, next = Object.assign({}, old, collectSettings());   // merged, so settings that are not on the form (like the browser voice) survive
   if (!(old.freeTier && old.key === next.key && (old.model || GEMINI.model) === next.model)) delete next.freeTier;   // a new key or story model gets re-checked
-  db.settings = next; persist(); keyStatus();
+  db.settings = next; persist(); keyStatus(); document.body.classList.toggle('guest', guest()); showUsage();
 }
 $('saveSet').onclick = () => { autoSave(); alert('Settings saved.'); };
 document.querySelectorAll('#settings input:not([type=file]), #settings select:not(#setVoice), #settings textarea').forEach(el => { el.addEventListener('change', autoSave); if (el.type === 'password' || el.type === 'text' || el.tagName === 'TEXTAREA') el.addEventListener('input', autoSave); });
@@ -2355,10 +2439,75 @@ $('wStart').onclick = () => {
 $('wDemo').onclick = () => { $('setFake').checked = true; autoSave(); closeWelcome(); $('newExpBtn').click(); };
 $('wSkip').onclick = closeWelcome;
 
+// ---------------- Invited guest: welcome screen ----------------
+function guestWelcomeText() {
+  const i = inviteInfo; if (!i) return;
+  if (i.name) $('gwHello').textContent = 'Hi ' + i.name + ', you have been invited to play.';
+  $('gwLeft').textContent = i.status !== 'active' ? INVITE_OFF_MSG : i.minutesLeft > 0 ? 'Your invite has about ' + i.minutesLeft + ' minutes of play.' : QUOTA_MSG;
+}
+$('gwMic').onclick = async () => {
+  const st = $('gwMicStatus');
+  try { const m = await navigator.mediaDevices.getUserMedia({ audio: true }); m.getTracks().forEach(t => t.stop()); st.textContent = 'The microphone is allowed. You are all set.'; }
+  catch (e) { st.textContent = 'The microphone was not allowed (' + e.name + '). You can still type, or allow it later in your browser\'s settings for this site.'; }
+};
+$('gwStart').onclick = () => {
+  db.settings.guestWelcomed = db.settings.welcomed = true; db.settings.speak = true; persist();
+  $('guestWelcome').classList.remove('on');
+  if (!Object.keys(db.adventures).length) $('newExpBtn').click();
+};
+
+// ---------------- Invite admin: open the game with ?admin ----------------
+let admPw = ''; try { admPw = sessionStorage.getItem('holodeck.admin') || ''; } catch (e) {}
+async function admCall(action, extra) {
+  const r = await fetch('/api/admin', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-password': admPw }, body: JSON.stringify(Object.assign({ action }, extra || {})) });
+  const o = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(o.message || { 401: 'Wrong password.', 404: 'The invite server is not on this site (see "Invite friends" in the README).' }[r.status] || 'HTTP ' + r.status + ' ' + (o.error || ''));
+  return o;
+}
+const inviteLink = c => location.origin + location.pathname + '?invite=' + c;
+const money = n => '$' + (+n).toFixed(2);
+function admRender(o) {
+  $('admLogin').style.display = 'none'; $('admMain').style.display = '';
+  $('admList').innerHTML = !o.invites.length ? '<p class="tag">No invites yet.</p>' : '<table class="adm"><tr><th>Name</th><th>Allowance</th><th>Used</th><th>Left</th><th>Last played</th><th>Status</th><th></th></tr>' +
+    o.invites.map(i => '<tr><td><b>' + esc(i.name) + '</b><br><span class="tag">' + esc(i.code) + '</span></td><td>' + money(i.allow) + '</td><td>' + money(i.spent) + '<br><span class="tag">' + i.minutesPlayed + ' min</span></td>' +
+      '<td>about ' + i.minutesLeft + ' min</td><td>' + (i.last ? new Date(i.last).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '-') + '</td><td>' + (i.status === 'active' ? 'Active' : 'Paused') + '</td>' +
+      '<td><button data-act="copy" data-code="' + esc(i.code) + '">Copy link</button><button data-act="add" data-code="' + esc(i.code) + '">Add more</button>' +
+      '<button data-act="' + (i.status === 'active' ? 'pause' : 'resume') + '" data-code="' + esc(i.code) + '">' + (i.status === 'active' ? 'Pause' : 'Resume') + '</button><button data-act="delete" data-code="' + esc(i.code) + '" data-name="' + esc(i.name) + '">Delete</button></td></tr>').join('') + '</table>';
+  $('admTotals').textContent = 'Guests this month: ' + money(o.month) + ' of the ' + money(o.ceiling) + ' monthly ceiling (every invite stops if it is reached). All time: ' + money(o.total) + '.';
+}
+async function admRun(action, extra, done) {
+  $('admMsg').textContent = '';
+  try { const o = await admCall(action, extra); admRender(o); if (done) done(o); }
+  catch (e) { $('admMsg').textContent = e.message; if (/password/i.test(e.message)) { $('admLogin').style.display = ''; $('admMain').style.display = 'none'; } }
+}
+function copyLink(c) {
+  const l = inviteLink(c);
+  (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(() => { $('admMsg').textContent = 'Link copied: ' + l; }, () => prompt('Copy this link:', l));
+}
+$('admGo').onclick = () => { admPw = $('admPass').value; try { sessionStorage.setItem('holodeck.admin', admPw); } catch (e) {} admRun('list'); };
+$('admPass').addEventListener('keydown', e => { if (e.key === 'Enter') $('admGo').click(); });
+$('admCreate').onclick = () => {
+  const name = $('admName').value.trim(), allow = +$('admAllow').value;
+  if (!name || !(allow > 0)) { $('admMsg').textContent = 'Type a name and an allowance first.'; return; }
+  admRun('create', { name, allow }, o => { $('admName').value = '';
+    $('admLink').innerHTML = '<p>Link for ' + esc(name) + ': <code>' + esc(inviteLink(o.created)) + '</code> <button data-act="copy" data-code="' + esc(o.created) + '">Copy</button></p>'; });
+};
+$('admin').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return; const code = b.dataset.code, act = b.dataset.act;
+  if (act === 'copy') copyLink(code);
+  else if (act === 'add') { const v = prompt('Add how many dollars? (about 10 cents a minute)', '3'); if (v && +v > 0) admRun('add', { code, amount: +v }); }
+  else if (act === 'delete') { if (confirm('Delete the invite for ' + b.dataset.name + '? Their link stops working.')) admRun('delete', { code }); }
+  else admRun(act, { code });
+});
+$('admClose').onclick = () => { $('admin').classList.remove('on'); history.replaceState(null, '', location.pathname); };
+
 // ---------------- Start up ----------------
 if (!db.adventures[db.current]) db.current = '';
 loadSettings(); persist(); refresh(); renderStart(); initDir(); initVoices();
-if (!S().key && !S().fake && !S().welcomed && !Object.keys(db.adventures).length) $('welcome').classList.add('on');
+document.body.classList.toggle('guest', guest());
+if (guest()) { if (!S().guestWelcomed) $('guestWelcome').classList.add('on'); loadInvite(); }
+else if (!S().key && !S().fake && !S().welcomed && !Object.keys(db.adventures).length) $('welcome').classList.add('on');
+if (new URLSearchParams(location.search).has('admin')) { $('admin').classList.add('on'); if (admPw) admRun('list'); }
 keyStatus();
 (function storageCheck() {
   let ok = true;
