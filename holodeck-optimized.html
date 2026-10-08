@@ -651,7 +651,7 @@ function fake(tag, m) {
   const last = String(m[m.length - 1].content).split(/\n(?:THE PLAYER|INSTRUCTION): /).pop();   // just the action, not the private briefing
   if (tag === 'gm') return '[fake GM] The holodeck hums. You said: "' + last.slice(0, 120) + '". A hooded figure named Captain Mara watches from the Rusty Anchor tavern.';
   if (tag === 'options') return JSON.stringify({ options: ['Fake option A', 'Fake option B', 'Fake option C', 'Fake option D'] });
-  if (tag === 'final') return JSON.stringify({ title: 'Fake Tale', summary: 'You did things. Things happened.', holodeck: { grade: 'B+', score: 88, comment: 'The quiet scenes delivered the feeling; the chase in the middle got in the way.' }, player: { grade: 'B', score: 84, comment: 'You committed to your character, but played it safe at the docks.' } });
+  if (tag === 'final') return JSON.stringify({ title: 'Fake Tale', summary: 'You did things. Things happened.', next: 'Next time, take the fake tale somewhere stranger.', holodeck: { grade: 'B+', score: 88, comment: 'The quiet scenes delivered the feeling; the chase in the middle got in the way.' }, player: { grade: 'B', score: 84, comment: 'You committed to your character, but played it safe at the docks.' } });
   if (tag === 'extract') return JSON.stringify({ lore: [{ name: 'Captain Mara', type: 'person', aliases: ['Mara'], desc: 'Hooded figure who watches from the tavern.' }, { name: 'Rusty Anchor', type: 'place', aliases: [], desc: 'A dockside tavern.' }],
     events: ['Player met the gaze of Captain Mara.'], location: 'Rusty Anchor', links: [['Rusty Anchor', 'Harbour Pier']], beats: [{ beat: 'Learn what Captain Mara wants', status: 'active' }],
     mood: { feeling: 5 + Math.floor(Math.random() * 5), hooked_on: Math.random() < 0.4 ? 'Captain Mara' : '', meandering: Math.random() < 0.3, leaving_plot: false }, goal_progress: 'Settling in at the tavern.' });
@@ -2054,16 +2054,18 @@ SHORT STORY MODE (this session is only ${timed(a) ? a.minutes + ' minutes' : a.l
 - Keep humour and intrigue quick and light: one good laugh or one sharp question per reply is plenty. Make it a page turner.
 - Plant one memorable detail early and pay it off at the end. The ending lands with feeling: a turn, a reveal or a moment of grace that makes the whole story click.`;
 const SHORT_NUDGES = ['sensory', 'heart', 'banter', 'choice', 'payoff', 'complication', 'wonder', 'quiet'];   // the director's simpler moves; no side plots, off-screen events or hidden agendas
-const FINAL_RULES = `You are a discerning high school English teacher writing the report card for an interactive-fiction session. Be fair but honest and specific, like real margin comments: praise what earned it, name what fell short, and do not inflate grades.
-GRADING CALIBRATION (be strict): typical sessions land at 70-85; 86-92 needs clear excellence; 93+ is very rare; 100 is never given. Each grade cites at least one specific strength AND one specific weakness from the transcript. Letter grades must match scores (A 93-100, A- 90-92, B+ 87-89, B 83-86, B- 80-82, C+ 77-79, C 70-76, D or F below 70). Ignore voice-to-text transcription errors in the player's words: never penalise or mention them.
-There are exactly two grades:
-1. HOW THE HOLODECK DID (the Game Master): alignment to the player's goals. Above all, how fully it delivered the FEELING TO ACHIEVE (the readings taken during play are a guide, not the answer), then how well it served the player's own goal (simulator) or ran a satisfying story with a real ending (curated), plus the quality of the writing and characters. Penalise anything that worked against the feeling, such as plot that wouldn't let go, interruptions, or jokes that broke the mood.
-2. HOW YOU DID (the player): the player's own actions. Commitment to their character, creativity, curiosity, the risks they took and how they engaged with the people and the world. Leaving the plot to chase the feeling is a legitimate choice, not a fault.
+// The report card should leave the player wanting another go: an honest grade for the phonodeck (that is how it improves), and a warm,
+// funny, specific one for the player. Players mostly talk, so short spoken commands are how the game is meant to be played, never a fault.
+const FINAL_RULES = `You write the report card at the end of an interactive story session. The reader is the player, who just finished and is deciding whether to play again. Your job is to make them grin, feel their best moments were noticed, and want to come back.
+There are exactly two grades. Letter grades must match scores (A+ 97-100, A 93-96, A- 90-92, B+ 87-89, B 83-86, B- 80-82, C+ 77-79, C 70-76, D or F below 70). Ignore voice-to-text transcription errors in the player's words: never mention them.
+1. HOW THE PHONODECK DID (the Game Master), graded honestly and strictly, because this is how it improves: typical sessions land at 70-85, 86-92 needs clear excellence, 93+ is rare. Above all, how fully it delivered the FEELING TO ACHIEVE (the readings taken during play are a guide, not the answer), then how well it served the player's own goal (simulator) or ran a satisfying story with a real ending (curated), plus the writing and characters. Name one thing it did well and one thing it should do better, owning its mistakes with a little self-deprecating humour. Penalise anything that worked against the feeling: plot that wouldn't let go, interruptions, jokes that broke the mood.
+2. HOW YOU DID (the player), in the voice of a delighted, witty fan who was watching: generous (most players land between B+ and A+; below B only if they barely took part), playful teasing is welcome, but never a lecture. Quote or name their best two or three moments: the funniest line, the boldest move, the kindest choice, the moment they changed the story. Celebrate how they played, whatever their style: a few spoken words that steer the story are the game working perfectly. NEVER criticise short inputs, "telling not showing", prose quality, grammar or effort. If you suggest anything, frame it as a tempting dare for next time ("next time, see what happens if you..."), not a correction.
 Output ONLY one JSON object:
 {"title":"a title for the story",
- "summary":"120-180 word past-tense recap of the whole adventure, second person",
- "holodeck":{"grade":"letter grade such as B+","score":0-100,"comment":"4-6 sentences in the teacher's voice"},
- "player":{"grade":"letter grade","score":0-100,"comment":"4-6 sentences in the teacher's voice, addressed to the player"}}
+ "summary":"120-180 word past-tense recap of the whole adventure, second person, told like a highlight reel",
+ "holodeck":{"grade":"letter grade such as B+","score":0-100,"comment":"3-5 sentences"},
+ "player":{"grade":"letter grade","score":0-100,"comment":"3-5 sentences addressed to the player, naming their actual moments"},
+ "next":"one irresistible idea for their next adventure, built on something they loved in this one, 1-2 sentences, addressed to the player"}
 No commentary, no markdown fences.`;
 function finalMessages(a) {
   const pl = a.transcript.filter(t => t.role === 'player').map((t, i) => (i + 1) + '. ' + t.text.slice(0, 300)).join('\n');
@@ -2090,7 +2092,8 @@ function showFinale(a) {
   if (a.result && a.result.holodeck) {   // the two-grade report card
     const r = a.result, card = (t, g) => '<h3>' + t + '</h3><div class="card"><span class="grade">' + esc(g.grade || '?') + '</span> <span class="tag">' + esc(g.score != null ? g.score + '/100' : '') + '</span><p>' + esc(g.comment || '') + '</p></div>';
     $('finaleBody').innerHTML = '<div class="tag">ADVENTURE COMPLETE</div><h1>' + esc(r.title || db.current) + '</h1><p>' + esc(r.summary || '') + '</p>' +
-      card('HOW THE PHONODECK DID <span class="tag">(the feeling: ' + esc(feelingOf(a)) + (isSim(a) ? '; your goal: ' + esc(goalOf(a)) : '') + ')</span>', r.holodeck) + card('HOW YOU DID', r.player || {});
+      card('HOW THE PHONODECK DID <span class="tag">(the feeling: ' + esc(feelingOf(a)) + (isSim(a) ? '; your goal: ' + esc(goalOf(a)) : '') + ')</span>', r.holodeck) + card('HOW YOU DID', r.player || {}) +
+      (r.next ? '<h3>NEXT TIME</h3><div class="card"><p>' + esc(r.next) + '</p></div>' : '');
     $('finale').classList.add('on'); return;
   }
   const r = a.result || {}, s = r.story || {}, p = r.player || {}, f = p.followed || {}, j = p.judgement || {}, rv = r.roadmap_review || [];
