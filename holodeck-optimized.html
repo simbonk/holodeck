@@ -334,6 +334,7 @@
     <button class="big" id="depDeep">Deep set-up<small>A carefully curated experience: optionally upload a photo to paint the world from, then a few more questions, with suggestions tailored to what you have told me.</small></button>
   </div>
   <textarea id="curA" placeholder="Type your own answer, or tap options above..."></textarea>
+  <div id="curSuggestRow" style="display:none;margin:4px 0 8px"><button id="curSuggest" class="mini">&#10024; Suggest some feelings</button></div>
   <div class="nav2">
     <button id="curBack">Back</button>
     <button id="curSkip">Surprise me</button>
@@ -700,7 +701,10 @@ function clockTick(a, hidden) {
   else a.left = null;
 }
 const isOver = a => !!a && (a.ended || (!timed(a) && a.length > 0 && playerTurns(a) >= a.length));
-const FEELINGS = ['Nostalgia', 'Unapologetic Relaxation', 'Exhilaration and Adventure', 'Deep Connection Love', 'Pure Indulgence', 'Awe and Wonder'];
+// Ready-made feeling ideas for "Suggest some feelings" when no model can be asked (offline demo, or the request fails). Specific, story-shaped feelings make better stories than labels.
+const FEELING_IDEAS = ['The thrill of getting away with something', 'Coming home after years away', 'Being truly seen by someone', 'Quiet awe under an impossibly big sky',
+  'Cosy safety while a storm rages outside', 'Hard-won triumph against the odds', 'Bittersweet nostalgia for a time I never lived', 'The warmth of a found family',
+  'Delicious suspense, then sweet relief', 'Wonder at discovering something no one has seen', 'Falling a little in love with a place', 'The calm of having nowhere to be'];
 const FEELING_CRAFT = [
   [/nostalg/i, 'Nostalgia: warm, specific period detail and sensory memory (a song, a smell, a texture), familiar rituals, gentle callbacks, golden light and a touch of bittersweet. Let things feel the way they used to.'],
   [/relax/i, 'Unapologetic Relaxation: low stakes, no danger, no deadlines, nothing that demands action. Comfort, ease, slow time, pleasant textures and small pleasures; people are easy company. Let the player linger as long as they like and never manufacture a problem.'],
@@ -1684,12 +1688,13 @@ $('micBtn').onclick = () => {
 // A session of 15 minutes or less is told as a clean, simple short story, and its option chips (cs) stay on Earth, in familiar times.
 const QUESTIONS = [
   { id: 'time', single: true, q: 'How much time do you have?', h: 'You play by the clock, not by turns. The Game Master keeps an eye on the time and lands a proper ending before it runs out, then you get a report card. 10-15 minutes makes a quick short story.', c: ['10 minutes (a quick story)', '20 minutes', '30 minutes', '45 minutes', '1 hour', '2 hours (an epic)'], ph: 'Or type your own, e.g. 25 minutes' },
-  { id: 'feeling', q: 'What feeling do you want to come away with?', h: 'This is the Game Master\'s main goal: everything bends toward it. Pick one or two, or describe it in your own words. Wait a moment and more ideas appear.', c: FEELINGS, ph: 'e.g. the cosy feeling of a snow day with nowhere to be' },
+  { id: 'feeling', suggest: 'Suggest some feelings', q: 'What feeling do you want to come away with?', h: 'This is the Game Master\'s main goal: everything bends toward it. Describe it in your own words; the more specific, the better the story. Stuck? Press "Suggest some feelings" (it builds on anything you have typed).', c: [], ph: 'e.g. the cosy feeling of a snow day with nowhere to be' },
   { id: 'mode', single: true, q: 'How do you want to play?', h: 'Curated story: a hidden plot with a beginning, middle and end, which bends (or waits) when you are happy elsewhere. Experience simulator: no plot points at all, just a richly painted world, your own goal and the feeling.', c: ['Curated story (a plot that bends to you)', 'Experience simulator (no plot, just the world and the feeling)'] },
   { id: 'photo', photo: true, q: 'Paint the world from a photo?', h: 'Optional. A picture is worth a thousand words: the phonodeck works out the place, the time and the people, writes the world from them, and fills in the remaining questions for you. Add a caption if you like.', c: [], ph: 'Optional caption: who or where is this? e.g. "Me and Dana in Lisbon, summer 2019"' },
   { id: 'goal', q: 'What do you want to do there?', h: 'Your goal for this experience. The Game Master helps you do it, with no plot getting in the way. You can change your mind once you are there.', c: ['Explore every corner', 'Spend time with someone special', 'Learn a craft from a local', 'Eat my way through the place', 'Do absolutely nothing', 'Throw a party'],
     ck: ['Explore every corner', 'Make friends with the animals', 'Build something amazing', 'Find all the secret places', 'Have a feast', 'Learn some magic'], ph: 'e.g. Spend an evening in Ten Forward swapping stories with Guinan' },
-  { id: 'world', q: 'What kind of world do you want to step into?', h: 'Genre and setting.', c: ['Noir detective', 'Space opera', 'High fantasy', 'Cyberpunk', 'Cozy mystery', 'Gothic horror', 'Wild West', 'Post-apocalypse', 'Pirate seas', 'Historical', 'Superhero', 'Surprise me'],
+  { id: 'world', q: 'What kind of world do you want to step into?', h: 'Pick an era or a world you find fascinating. The more specific the time and place, the richer the story.', ph: 'Or name your own, e.g. Ancient Rome in 44 BC, or Tokyo in 2077',
+    c: ['The American Civil War, 1863', 'Star Trek: The Next Generation', 'France during World War II', 'Los Angeles in the 1920s', 'Miami in 1985', 'Victorian London in the 1880s', 'Pirates of the Caribbean, 1715', 'Surprise me'],
     cs: ['Small-town mystery', 'Big-city detective', 'Seaside village', 'Tropical beach town', 'Road trip', 'Wild West', 'Pirate seas', 'Roaring Twenties', 'Cold War spies', 'Victorian London', 'Modern-day heist', 'Surprise me'],
     ck: ['Dragons and castles', 'Space adventure', 'Magic school', 'Pirate treasure hunt', 'Dinosaur island', 'Superheroes', 'Underwater kingdom', 'Talking animals', 'A friendly haunted house', 'Jungle explorer', 'Toys come alive', 'Surprise me'] },
   { id: 'vibe', q: 'What vibe should it have?', h: 'Pick a mood; more than one is fine.', c: ['Gritty', 'Whimsical', 'Epic', 'Cozy', 'Tense', 'Funny', 'Melancholic', 'Romantic', 'Mysterious', 'Wholesome'],
@@ -1756,7 +1761,7 @@ function curatorAnswer(a, id) {
 }
 // ---------------- Extra options: if the player lingers on a question, the cheap model suggests more chips that fit their earlier answers ----------------
 // The offline demo has no model, so it shows a few ready-made extras instead.
-const DEMO_MORE = { feeling: ['Cosy belonging', 'Mischievous fun', 'Quiet pride', 'Bittersweet longing', 'Fearless freedom', 'Childlike delight'],
+const DEMO_MORE = { feeling: FEELING_IDEAS,
   goal: ['Find the best view in town', 'Cook a meal with a local', 'Win over a grumpy regular', 'Learn the local dance'], world: ['Ancient Rome', '1960s Hollywood', 'A Caribbean island', 'Small-town carnival'], vibe: ['Dreamy', 'Bittersweet', 'Swashbuckling', 'Eerie'],
   who: ['A retired thief', 'A ship\'s cook', 'A disgraced knight', 'A street magician'], traits: ['Kind but naive', 'Proud but loyal', 'Curious but clumsy', 'Calm but secretive'],
   where: ['A floating market', 'A snowbound monastery', 'A lighthouse at dusk', 'A jungle ruin'], hook: ['Deliver a secret message', 'Break a curse', 'Win a contest', 'Clear your name'],
@@ -1779,22 +1784,26 @@ function addExtraChips(list) {
     const b = document.createElement('button'); b.className = 'chip ai'; b.dataset.c = c; b.textContent = c; $('curChips').appendChild(b); });
   wireChips();
 }
-const MORE_ROUNDS = { feeling: 3 };   // feelings keep populating: up to 3 rounds of suggestions while you linger
+const MORE_ROUNDS = {};
 const moreDue = id => (cur.rounds[id] || 0) < (MORE_ROUNDS[id] || 1);
 function armMore() {   // (re)start the wait; every interaction restarts it, so it only fires when the player seems stuck
   clearTimeout(moreTimer); const q = curQs()[cur.i];
-  if (!q || !moreDue(q.id) || ['time', 'mode', 'photo', 'length', 'link', 'me', 'depth', 'describe'].includes(q.id) || (S().fake ? false : !hasKey())) return;
+  if (!q || q.suggest || !moreDue(q.id) || ['time', 'mode', 'photo', 'length', 'link', 'me', 'depth', 'describe'].includes(q.id) || (S().fake ? false : !hasKey())) return;
   moreTimer = setTimeout(() => moreOptions(q.id), q.id === 'feeling' ? 3500 : MORE_AFTER_MS);
 }
-async function moreOptions(id) {
+async function moreOptions(id, asked) {   // asked: the player pressed a Suggest button (no round limit)
   const qs = curQs(), i = qs.findIndex(q => q.id === id);
-  if (i < 0 || i !== cur.i || !moreDue(id) || !$('curator').classList.contains('on')) return;
+  if (i < 0 || i !== cur.i || (!asked && !moreDue(id)) || !$('curator').classList.contains('on')) return;
   cur.rounds[id] = (cur.rounds[id] || 0) + 1;
-  if (S().fake) { const d = (DEMO_MORE[id] || []).slice((cur.rounds[id] - 1) * 4, cur.rounds[id] * 4); cur.extra[id] = (cur.extra[id] || []).concat(d); addExtraChips(d); armMore(); return; }
+  const fallback = () => { const all = (DEMO_MORE[id] || []).filter(c => !(minorPick() && /love/i.test(c))), n = asked ? 6 : 4, k = ((cur.rounds[id] - 1) * n) % Math.max(all.length, 1); return all.slice(k, k + n); };
+  if (S().fake || !hasKey()) { const d = fallback(); cur.extra[id] = (cur.extra[id] || []).concat(d); addExtraChips(d); armMore(); return; }
   $('curMsg').textContent = 'Thinking of more options...';
   try {
     const q = qs[i], prior = qs.slice(0, i).map(x => '- ' + x.q + ' ' + (x.me ? meSummary() : cur.answers[x.id] || '(open)')).join('\n') || '(nothing yet)';
-    const gp = (id === 'feeling' ? ' For this question the options must be FEELINGS or emotional experiences someone might want from an escape (1-4 words, e.g. "Cosy belonging", "Mischievous fun", "Quiet pride", "Bittersweet longing"), fitting the earlier answers.' : '') +
+    const typed = $('curA').value.trim();
+    const gp = (id === 'feeling' ? ' For this question IGNORE the 1-4 word rule above: the options are FEELINGS someone might want to come away with from a really good story, each a specific, evocative emotional experience of 3-9 words (e.g. "The thrill of getting away with something", "Coming home after years away", "Cosy safety while a storm rages outside", "Bittersweet nostalgia for a time I never lived"). Make them varied: warm, thrilling, bittersweet, triumphant, peaceful.' +
+      (typed ? ' The player has typed "' + typed.slice(0, 300) + '": take it as the cue, and offer richer, more specific variations and close neighbours of that feeling.' : '') : '') +
+      (id === 'world' ? ' For this question the options are specific eras and places, or well-known story universes, each with a time and a place where the time matters (e.g. "Venice during Carnival, 1750", "Berlin, 1989").' : '') +
       (id === 'goal' ? ' For this question the options are things to DO in the world (2-6 words, e.g. "Learn a craft from a local", "Throw a party").' : '') + (id === 'play' ? ' For this question the options must be GAMEPLAY CATEGORIES (short, e.g. "Heist planning", "Social intrigue", "Chase scenes", "Survival", "Negotiation", "Mystery solving").' : '') +
       (ageNow() ? ' The player is ' + ageNow() + ' years old: every option must suit and appeal to that age' + (kidPick() ? ' (a child: G-rated, playful, no romance, nothing frightening).' : minorPick() ? ' (a teenager: PG, no romance).' : '.') : '') +
       (shortPick() ? ' The player chose a SHORT story: keep options simple and grounded, set on Earth today or in a familiar period of history; avoid high fantasy, science fiction and invented worlds.' : '');
@@ -1802,7 +1811,9 @@ async function moreOptions(id) {
       { role: 'user', content: 'EARLIER ANSWERS:\n' + prior + '\n\nQUESTION: ' + q.q + ' (' + q.h + ')\nEXISTING OPTIONS: ' + chipsOf(q).concat(cur.extra[id] || []).join('; ') }]);
     const opts = (parseJson(raw).options || []).slice(0, 8); cur.extra[id] = (cur.extra[id] || []).concat(opts);
     if ((curQs()[cur.i] || {}).id === id) { addExtraChips(opts); $('curMsg').textContent = ''; armMore(); }
-  } catch (e) { console.warn('more options failed', e); if ((curQs()[cur.i] || {}).id === id) $('curMsg').textContent = 'Could not think of more options: ' + String(e.message || e).slice(0, 220); }
+  } catch (e) { console.warn('more options failed', e); if ((curQs()[cur.i] || {}).id !== id) return;
+    if (asked && DEMO_MORE[id]) { const d = fallback(); cur.extra[id] = (cur.extra[id] || []).concat(d); addExtraChips(d); $('curMsg').textContent = ''; }   // still give some ideas
+    else $('curMsg').textContent = (e.quota ? '' : 'Could not think of more options: ') + String(e.message || e).slice(0, 220); }
 }
 function curRender() {
   const qs = curQs(); cur.i = Math.min(cur.i, qs.length - 1); const q = qs[cur.i], n = qs.length;
@@ -1819,6 +1830,8 @@ function curRender() {
   if (q.me) { const nm = String(cur.answers.name || '').trim().split(/\s+/); $('meName').value = nm.shift() || ''; $('meLast').value = nm.join(' '); $('meAge').value = cur.answers.age || ''; $('meRomance').value = cur.answers.romance || ''; meRomanceShow(); }
   $('curFinish').style.display = cur.photo && cur.photo.canvas && cur.i < n - 1 ? '' : 'none';
   $('curA').value = (q.depth ? cur.answers.describe : cur.answers[q.id]) || ''; $('curA').placeholder = q.ph || 'Type your own answer, or tap options above...';
+  $('curSuggestRow').style.display = q.suggest ? '' : 'none'; if (q.suggest) { $('curSuggest').textContent = '\u2728 ' + q.suggest; busyBtn($('curSuggest')); }
+  if (q.suggest) $('curSuggestRow').after($('curChips')); else $('curHint').after($('curChips'));   // suggestions appear under the box they help with
   $('curChips').innerHTML = chipsOf(q).map(c => '<button class="chip" data-c="' + esc(c) + '">' + esc(c) + '</button>').join('');
   if (cur.extra[q.id]) addExtraChips(cur.extra[q.id]); else wireChips();
   $('curBack').disabled = cur.i === 0;
@@ -1827,6 +1840,7 @@ function curRender() {
 }
 function curChips() { const parts = $('curA').value.split(/,\s*/); $('curChips').querySelectorAll('.chip').forEach(b => b.classList.toggle('sel', parts.includes(b.dataset.c))); }
 $('curA').addEventListener('input', () => { curChips(); armMore(); });
+$('curSuggest').onclick = async () => { const q = curQs()[cur.i]; if (!q) return; busyBtn($('curSuggest'), 'Thinking of some...'); await moreOptions(q.id, true); if ((curQs()[cur.i] || {}).id === q.id) busyBtn($('curSuggest')); };
 function curStore() {
   const q = curQs()[cur.i]; if (!q) return;
   if (q.depth) { if (quickPick()) cur.answers.describe = $('curA').value.trim(); return; }
