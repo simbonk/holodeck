@@ -44,6 +44,7 @@
   .big small{display:block;color:var(--dim);font-size:14px}.big.primary small{color:#023;opacity:.8}
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
   .chip{border-radius:999px;padding:6px 12px;font-size:14px}
+  #curPresets .chip{border-color:var(--accent);margin:0 6px 6px 0} #curPresets .chip.sel{background:var(--accent);color:#012}
   .chip.sel{background:var(--accent);color:#012;border-color:var(--accent)}
   .bar{height:6px;background:var(--panel);border-radius:3px;margin:8px 0 18px}
   .bar div{height:100%;background:var(--accent);border-radius:3px;transition:width .2s}
@@ -335,6 +336,7 @@
     <label><input type="checkbox" id="romNone" style="width:auto"> No romance this time</label>
   </div>
   <div id="curDepth" style="display:none">
+    <div id="curPresets"><div class="tag" style="margin:8px 0 6px">Ready-made stories: tap one, then press "Create my experience". Or make your own below.</div><div id="presetChips"></div></div>
     <button class="big" id="depQuick">Quick start<small>Describe what you want in a sentence or two. The phonodeck fills in the rest as best it can, and the game begins.</small></button>
     <button class="big" id="depDeep">Deep set-up<small>A carefully curated experience: optionally upload a photo to paint the world from, then a few more questions, with suggestions tailored to what you have told me.</small></button>
   </div>
@@ -1728,6 +1730,94 @@ const ME_Q = { id: 'me', me: true, q: 'About you', h: 'Your name and age shape t
 // Question 5: a quick description and go, or the deep set-up (photo and the detailed questions).
 // Two big buttons: Quick shows a box to describe the experience (Next then creates it); Deep moves straight on to the photo and the detailed
 // questions. The detailed questions are only counted ("Question 5 of 5") once Deep is chosen.
+// Curator's picks: six ready-made stories. One tap fills the description, the feeling and every deep set-up answer (all of it can be
+// changed on the way through); "beats" go to the Game Master only, as a guide for a good series of events.
+const PRESETS = [
+  { id: 'paris', label: 'Paris, 1944: The Medic Comes Home', title: 'The Medic Comes Home',
+    feeling: 'From numbness to seeing the beauty in everything again',
+    describe: 'I am a field medic just back in Paris from the front, a week after the Liberation. The city is celebrating, but all I can see is rubble and ration queues. Then I meet people who see the world completely differently, and slowly they show me the beauty I stopped noticing.',
+    world: 'Paris, late August 1944, the week after the Liberation',
+    vibe: 'Melancholic, Wholesome, Cozy',
+    who: 'A field medic in the Free French forces, home on leave after a year at the front: good hands, few words, sleeps badly',
+    traits: 'Steady and kind in a crisis, but numb, guarded and certain the world has lost its colour',
+    where: 'A café terrace in Montmartre on a hot, bright morning, church bells ringing, flags in every window, while I sit apart with a cup of bad chicory coffee',
+    hook: 'Find a reason to feel alive again before my leave ends and I go back to the front',
+    allies: 'Lucien, a one-armed accordion player who plays for anyone who looks sad; Madame Odette, a flower seller who grows roses in shell craters; Pipo, a seven-year-old who collects lost buttons and the stories behind them',
+    threat: 'My own grief and exhaustion, the memory of the soldiers I could not save, and the day my leave runs out',
+    play: 'Lots of dialogue, Rich, detailed prose, Forgiving',
+    avoid: 'Keep it PG-13; no gore, the war stays mostly off-stage',
+    beats: 'Open on the noise of celebration that the medic cannot feel. Each companion offers one small, concrete beauty (a song, a rose, a button with a story) and asks nothing in return. Midway, a medical emergency in the street lets the medic\'s skill save someone, and the city sees them. Plant Pipo\'s button collection early: at the end Pipo gives the medic a button "to remember Paris by", the one from their own uniform, found on the first morning. End at dusk with the city lights coming on for the first time in four years.' },
+  { id: 'trek', label: 'Star Trek TNG: First Contact', title: 'First Contact',
+    feeling: 'Wonder, pride, and laughing with my crew',
+    describe: 'I am the captain of a brand-new starship on her maiden mission. My first officer is an android trying earnestly to understand humour, and my doctor is brilliant, jaded and very funny. A species has just made its first warp flight, and we must make first contact without frightening them, embarrassing the Federation, or letting the doctor say anything unfortunate.',
+    world: 'Star Trek: The Next Generation era, 2369, aboard a brand-new Federation starship',
+    vibe: 'Funny, Epic, Wholesome',
+    who: 'The newly promoted captain of the USS Halcyon, on her maiden voyage: young for the chair and determined to get this right',
+    traits: 'Diplomatic and quick-witted, but impatient and a little too eager to impress Starfleet Command',
+    where: 'The bridge of the USS Halcyon, still smelling of new carpet, as the ship drops out of warp near the Teyari homeworld and their tiny first warp ship streaks past',
+    hook: 'Make a first contact the Teyari will celebrate for a thousand years',
+    allies: 'Commander Ithen, an android first officer studying humour with great seriousness and terrible timing; Dr. Margot Hale, the jaded, brilliant chief medical officer who has seen everything twice; Ensign Pell, a nervous young pilot',
+    threat: 'A Teyari general convinced the aliens are invaders, a ship\'s computer still full of maiden-voyage bugs, and Starfleet Command watching every word',
+    play: 'Lots of dialogue, Puzzles and clues, Forgiving',
+    avoid: 'Keep it PG-13; gentle humour, true to the spirit of the show',
+    beats: 'Start with the Teyari warp test going wrong: their pilot is stranded, and saving her means revealing the ship. Commander Ithen\'s attempts at jokes misfire early, then one lands perfectly at the most tense moment of the negotiation. Dr. Hale treats the Teyari pilot and becomes her unlikely friend. The general\'s fear peaks in a standoff that is won with honesty and a shared laugh, not phasers. End with the Teyari inviting the crew to their first warp festival, and Ithen\'s first genuine laugh.' },
+  { id: 'venice', label: 'Venice, 1750: The Mask-Maker\'s Secret', title: 'The Mask-Maker\'s Secret',
+    feeling: 'Mischief and delight',
+    describe: 'I am a mask-maker in Venice on the eve of Carnival. A stranger in a silver mask orders one that will let its wearer become anyone for a single night, and pays with a coin no one can identify. By dawn a doge, a cat burglar and a lovesick gondolier all want my masks, and I have one night to discover who the stranger really is.',
+    world: 'Venice, February 1750, the first night of Carnival',
+    vibe: 'Whimsical, Mysterious, Funny',
+    who: 'A mask-maker with a tiny, crooked workshop by the Rialto, famous for masks so good that people swear they change your face',
+    traits: 'Clever with my hands and my tongue, but nosy, a little vain, and terrible at keeping secrets',
+    where: 'My candlelit workshop on a foggy canal at midnight, masks watching from every wall, the bells of San Giacomo ringing in Carnival',
+    hook: 'Find out who the stranger in the silver mask is, and what they plan to do with a mask that can make them anyone',
+    allies: 'Bettina, my sharp-eyed apprentice who notices everything; Zanetto, a gondolier hopelessly in love with a woman he has only seen masked; Ombra, a cat who seems to belong to no one and everyone',
+    threat: 'A cat burglar who wants the mask to rob the Doge\'s palace, the Council of Ten\'s spies, and dawn, when the magic of the masks runs out',
+    play: 'Lots of dialogue, Puzzles and clues, Exploration',
+    avoid: 'Keep it PG-13; playful, not dark',
+    beats: 'The strange coin is a clue: it was minted for a Carnival two hundred years ago. Each customer wants the mask for a different reason, and helping or tricking them opens a new door. Plant the cat Ombra early; at the end the stranger is revealed as someone unexpected and harmless (perhaps the old Doge himself, longing to be an ordinary man for one night), and Ombra was guiding the mask-maker all along. Finish at dawn on a bridge, the masks coming off.' },
+  { id: 'hollywood', label: 'Hollywood, 1927: The Last Silent Picture', title: 'The Last Silent Picture',
+    feeling: 'Giddy fun and a big finish',
+    describe: 'I am the most famous face in silent pictures, and I have never once spoken on screen. The talkies are coming, and the studio\'s nervous young sound engineer has one week to make me sound like a star. My rival wants me to flop, my producer is selling the studio to a pickle magnate, and the premiere is Friday.',
+    world: 'Hollywood, October 1927, the week The Jazz Singer changes everything',
+    vibe: 'Funny, Whimsical, Epic',
+    who: 'The biggest star of silent pictures, adored for my eyebrows and my pratfalls, terrified of my own voice',
+    traits: 'Charming, fearless at stunts and a born ham, but vain, dramatic and secretly convinced I sound like a goose',
+    where: 'A sound stage at Paragon Pictures, padded with blankets against noise, a microphone hidden in a flower pot, five days before the premiere',
+    hook: 'Survive the switch to talking pictures and make Friday\'s premiere the triumph of the decade',
+    allies: 'Eddie Marsh, the jittery young sound engineer who is secretly a genius; Gloria Fenn, my wisecracking stunt double; Mr. Abernathy, my long-suffering butler who has heard me sing in the bath',
+    threat: 'Vivienne LaRue, my glamorous rival, who is sabotaging the sound tests; Horace Gherkin, the pickle magnate buying the studio; and the ticking clock to Friday',
+    play: 'Lots of dialogue, Action heavy, Forgiving',
+    avoid: 'Keep it PG-13; slapstick welcome',
+    beats: 'The first sound test is a disaster in a funny way (the microphone picks up everything except the star). Vivienne\'s sabotage escalates with each day. Eddie\'s invention keeps nearly working. Plant Mr. Abernathy\'s remark about the bath singing early: at the premiere the sound fails and the star saves the night by singing live, a voice nobody expected. Mr. Gherkin, charmed, keeps the studio. End with a standing ovation and a cue for a sequel.' },
+  { id: 'orient', label: 'Orient Express, 1931: The Magician\'s Last Trick', title: 'The Magician\'s Last Trick',
+    feeling: 'Cosy delight with a puzzle',
+    describe: 'I am a travelling stage magician on the Orient Express from Paris to Istanbul. On the first night a duchess\'s diamond vanishes in the middle of my act. Everyone assumes it is part of the show, including me, until I realise I did not do it. I have three snowbound days and a carriage of eccentric suspects to find out who did.',
+    world: 'The Orient Express, winter 1931, snowbound in the Balkan mountains',
+    vibe: 'Cozy, Mysterious, Funny',
+    who: 'The Great Marvello, a travelling stage magician: sleight of hand, a velvet cape and a carefully hidden past as a pickpocket',
+    traits: 'Quick hands and a quicker eye for a lie, but a show-off who cannot resist an audience',
+    where: 'The gleaming dining car of the Orient Express at midnight, chandeliers swaying, snow piling against the windows as the train grinds to a halt in a mountain pass',
+    hook: 'Find the Duchess\'s stolen diamond, the Star of Odessa, before the train reaches Istanbul and the police arrest the obvious suspect: me',
+    allies: 'Pip, my teenage assistant who is braver than me; Inspector Kova, a sleepy Yugoslav policeman who is much sharper than he looks; Duchess Anastasia, who seems strangely unbothered by her loss',
+    threat: 'A thief hidden among the passengers (a nervous honeymooning couple, a famous novelist, a chess grandmaster and a very polite conductor), and my own past catching up with me',
+    play: 'Puzzles and clues, Lots of dialogue, Forgiving',
+    avoid: 'Keep it PG-13; no murder, a cosy mystery',
+    beats: 'The theft happens during the magician\'s vanishing trick, so every clue is hidden in the act itself. Each suspect has a harmless secret that looks guilty. The novelist is secretly writing the whole thing down. Plant the Duchess\'s calm early: she hid the diamond herself to test who on the train could be trusted, but a real thief then took it from her hiding place. The magician solves it with one last trick in the dining car. End with the train pulling into Istanbul at sunrise.' },
+  { id: 'moon', label: 'The Moon, 2069: The First Café on the Moon', title: 'The First Café on the Moon',
+    feeling: 'Warm, cosy wonder',
+    describe: 'I have just opened the first café on the Moon, in a dome looking out at the Earth. My regulars are a homesick astronaut, a robot who wants to learn to bake, and a billionaire who keeps trying to buy the place. Tonight the Earth will be full in the sky, and someone very important has booked a table.',
+    world: 'Tranquility Base, the Moon, 2069, a hundred years after the first landing',
+    vibe: 'Cozy, Whimsical, Wholesome',
+    who: 'The owner of Earthrise, the first café on the Moon: a former engineer who gave up rockets to make the perfect cup of coffee in one-sixth gravity',
+    traits: 'Warm, inventive and a brilliant fixer of broken things, but stubborn and hopeless with money',
+    where: 'Earthrise café, a glass dome on the rim of a crater, the blue Earth hanging in the black sky, coffee steam rising very slowly in low gravity',
+    hook: 'Make tonight perfect for the mysterious guest who booked the best table for Full Earth night, and keep the café out of the billionaire\'s hands',
+    allies: 'Commander Asha Reyes, a homesick astronaut who has not been home in two years; BX-7, a maintenance robot determined to bake bread; Lemon, the café\'s very confused cat',
+    threat: 'Silas Crane, a charming billionaire who wants to turn the café into a theme park; a failing air recycler; and dough that will not rise in low gravity',
+    play: 'Lots of dialogue, Exploration, Forgiving',
+    avoid: 'Keep it PG; cosy, no peril beyond a few malfunctions',
+    beats: 'Every regular has a small wish for the evening. BX-7\'s bread keeps floating away, a running gag that pays off. The air recycler fails at the worst moment and the owner fixes it with something from the kitchen. Plant the reserved table early: the important guest turns out to be the last surviving person who watched the 1969 landing on television as a child, here to see the Earth from the Moon at last. Silas Crane is moved and backs off. End with everyone watching the full Earth together.' }
+];
 const DEPTH_Q = { id: 'depth', depth: true, q: 'Quick start or deep set-up?', h: 'Pick how much you want to set up.', c: [], ph: 'e.g. A pirate adventure with my pet dragon, hunting for treasure on a volcano island' };
 function mePrefill() {   // answers filled in from Settings > Personal details
   // Gender and interest are free text: common words read naturally ("a man", "women"); anything else is used as written.
@@ -1848,9 +1938,10 @@ function curRender() {
   if (q.rom) { const me = S().me || {}, a = cur.answers; $('romGender').value = a.romGender !== undefined ? a.romGender : me.gender || ''; $('romInterest').value = a.romInterest !== undefined ? a.romInterest : me.interest || ''; $('romNone').checked = !!a.romNone; }
   $('curA').style.display = q.me || q.rom || (q.depth && !quick) ? 'none' : ''; $('curNext').style.display = q.depth && !quick ? 'none' : '';
   $('depQuick').classList.toggle('primary', quick); $('depDeep').classList.toggle('primary', q.depth && deepPick());
-  if (q.depth) $('curHint').textContent = quick ? 'Describe it in a sentence or a paragraph, then press "Create my experience".' : q.h;
+  if (q.depth) $('curHint').textContent = cur.preset && quick ? 'Your story is ready: every detail is filled in (feeling: ' + cur.preset.feeling + '). Edit the description if you like, then press "Create my experience".' : quick ? 'Describe it in a sentence or a paragraph, then press "Create my experience".' : q.h;
   if (q.me) { const nm = String(cur.answers.name || '').trim().split(/\s+/); $('meName').value = nm.shift() || ''; $('meLast').value = nm.join(' '); $('meAge').value = cur.answers.age || ''; }
   $('curFinish').style.display = cur.photo && cur.photo.canvas && cur.i < n - 1 ? '' : 'none';
+  presetRender(q);
   $('curA').value = (q.depth ? cur.answers.describe : cur.answers[q.id]) || ''; $('curA').placeholder = q.ph || 'Type your own answer, or tap options above...';
   $('curSuggestRow').style.display = q.suggest ? '' : 'none'; if (q.suggest) { $('curSuggest').textContent = q.suggest; busyBtn($('curSuggest')); }
   if (q.suggest) $('curSuggestRow').after($('curChips')); else $('curHint').after($('curChips'));   // suggestions appear under the box they help with
@@ -1860,8 +1951,21 @@ function curRender() {
   curNextLabel();
   $('curMsg').textContent = ''; armMore();
 }
+const PRESET_IDS = ['world', 'vibe', 'who', 'traits', 'where', 'hook', 'allies', 'threat', 'play', 'avoid'];
+function presetPick(p) {   // fills the box, the feeling and every set-up answer; the Game Master also gets the story beats
+  if (cur.preset) presetDrop();
+  cur.preset = p; const a = cur.answers; a.depth = 'Quick start'; a.describe = p.describe; a.feeling = p.feeling; a.mode = QBY.mode.c[0];
+  PRESET_IDS.forEach(id => { a[id] = p[id]; }); curRender();
+}
+function presetDrop() { const p = cur.preset; if (!p) return; PRESET_IDS.forEach(id => { if (cur.answers[id] === p[id]) delete cur.answers[id]; }); cur.preset = null; }
+function presetRender(q) {
+  $('curPresets').style.display = q.depth && !kidPick() ? '' : 'none';
+  $('presetChips').innerHTML = PRESETS.map(p => '<button class="chip' + (cur.preset === p ? ' sel' : '') + '" data-p="' + p.id + '">' + esc(p.label) + '</button>').join('');
+}
+$('presetChips').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (b) presetPick(PRESETS.find(p => p.id === b.dataset.p)); });
 function curChips() { const parts = $('curA').value.split(/,\s*/); $('curChips').querySelectorAll('.chip').forEach(b => b.classList.toggle('sel', parts.includes(b.dataset.c))); }
-$('curA').addEventListener('input', () => { curChips(); armMore(); });
+$('curA').addEventListener('input', () => { curChips(); armMore();
+  if (cur.preset && (curQs()[cur.i] || {}).depth && !$('curA').value.trim().startsWith(cur.preset.describe.slice(0, 40))) { presetDrop(); presetRender(curQs()[cur.i]); } });
 $('curSuggest').onclick = async () => { const q = curQs()[cur.i]; if (!q) return; busyBtn($('curSuggest'), 'Thinking of some...'); await moreOptions(q.id, true); if ((curQs()[cur.i] || {}).id === q.id) busyBtn($('curSuggest')); };
 function curStore() {
   const q = curQs()[cur.i]; if (!q) return;
@@ -1873,8 +1977,8 @@ function curStore() {
   cur.answers.me = meSummary();
 }
 function meSummary() { const x = cur.answers; return [x.name && 'name ' + x.name, x.age && 'age ' + x.age].filter(Boolean).join('; ') || '(not given)'; }
-$('depQuick').onclick = () => { cur.answers.depth = 'Quick start'; curRender(); $('curA').focus(); };
-$('depDeep').onclick = () => { cur.answers.depth = 'Deep set-up'; delete cur.answers.describe; curAdvance(); };
+$('depQuick').onclick = () => { if (cur.preset) { presetDrop(); delete cur.answers.describe; } cur.answers.depth = 'Quick start'; curRender(); $('curA').focus(); };
+$('depDeep').onclick = () => { cur.answers.depth = 'Deep set-up'; if (!cur.preset) delete cur.answers.describe; curAdvance(); };   // after a ready-made story, the deep questions show its answers
 $('curBack').onclick = () => { curStore(); if (cur.i > 0) { cur.i--; curRender(); } };
 $('curSkip').onclick = () => { const q = curQs()[cur.i]; if (q.depth) { cur.answers.depth = 'Quick start'; cur.answers.describe = NOPREF; curAdvance(); return; } if (q.photo) { cur.photo = null; $('photoFile').value = ''; } $('curA').value = ''; cur.answers[q.id] = NOPREF; curAdvance(); };
 $('curNext').onclick = async () => {
@@ -1957,6 +2061,8 @@ async function curAdvance() {
     : q.me ? [{ id: 'name', q: 'Your name', a: cur.answers.name }, { id: 'age', q: 'Your age', a: cur.answers.age }].filter(x => x.a)
     : q.id === 'romance' ? [{ id: 'romance', q: 'Romance', a: noRomance(cur.answers.romance) ? '' : cur.answers.romance }].filter(x => x.a)
     : [{ id: q.id, q: q.q, a: cur.answers[q.id] || '(no preference)' }]);
+  if (cur.preset) { PRESET_IDS.forEach(id => { if (cur.answers[id] && !answers.some(x => x.id === id)) answers.push({ id, q: QBY[id].q, a: cur.answers[id] }); });
+    answers.push({ id: 'beats', q: 'Story beats for the Game Master (a guide for a good series of events; keep them secret from the player)', a: cur.preset.beats }); }
   { const me = Object.assign({}, S().me), nm = cur.answers.name, age = +cur.answers.age; let ch = false;   // remember your name and age for next time (never overwrites them)
     const [first, ...rest] = String(nm || '').split(/\s+/), last = rest.join(' ');
     if (first && !me.name) { me.name = first; $('setMeName').value = first; ch = true; }
@@ -1969,6 +2075,7 @@ async function curAdvance() {
     if (ch) { db.settings.me = me; persist(); } }
   let suggested;
   if (cur.src) { const base = cur.src.replace(/ \d+$/, ''); let k = 2; while (db.adventures[base + ' ' + k]) k++; suggested = base + ' ' + k; }
+  else if (cur.preset) suggested = cur.preset.title;
   else { const w = cur.answers.world || (cur.answers.describe || '').split(/[.!?]/)[0]; suggested = (isNoPref(w) || !w ? 'Adventure' : w.split(',')[0]).replace(/[^\p{L}\p{N} ]/gu, '').trim().slice(0, 30) + ' ' + new Date().toISOString().slice(5, 10); }
   let name = prompt('Name this experience:', suggested); if (!name) return; name = name.trim();
   if (db.adventures[name] && !confirm('"' + name + '" exists. Replace it?')) return;
