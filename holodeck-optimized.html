@@ -334,7 +334,7 @@
     <button class="big" id="depDeep">Deep set-up<small>A carefully curated experience: optionally upload a photo to paint the world from, then a few more questions, with suggestions tailored to what you have told me.</small></button>
   </div>
   <textarea id="curA" placeholder="Type your own answer, or tap options above..."></textarea>
-  <div id="curSuggestRow" style="display:none;margin:4px 0 8px"><button id="curSuggest" class="mini">&#10024; Make some suggestions</button></div>
+  <div id="curSuggestRow" style="display:none;margin:4px 0 8px"><button id="curSuggest" class="mini">Make some suggestions</button></div>
   <div class="nav2">
     <button id="curBack">Back</button>
     <button id="curSkip">Surprise me</button>
@@ -1840,7 +1840,7 @@ function curRender() {
   if (q.me) { const nm = String(cur.answers.name || '').trim().split(/\s+/); $('meName').value = nm.shift() || ''; $('meLast').value = nm.join(' '); $('meAge').value = cur.answers.age || ''; }
   $('curFinish').style.display = cur.photo && cur.photo.canvas && cur.i < n - 1 ? '' : 'none';
   $('curA').value = (q.depth ? cur.answers.describe : cur.answers[q.id]) || ''; $('curA').placeholder = q.ph || 'Type your own answer, or tap options above...';
-  $('curSuggestRow').style.display = q.suggest ? '' : 'none'; if (q.suggest) { $('curSuggest').textContent = '\u2728 ' + q.suggest; busyBtn($('curSuggest')); }
+  $('curSuggestRow').style.display = q.suggest ? '' : 'none'; if (q.suggest) { $('curSuggest').textContent = q.suggest; busyBtn($('curSuggest')); }
   if (q.suggest) $('curSuggestRow').after($('curChips')); else $('curHint').after($('curChips'));   // suggestions appear under the box they help with
   $('curChips').innerHTML = chipsOf(q).map(c => '<button class="chip" data-c="' + esc(c) + '">' + esc(c) + '</button>').join('');
   if (cur.extra[q.id]) addExtraChips(cur.extra[q.id]); else wireChips();
