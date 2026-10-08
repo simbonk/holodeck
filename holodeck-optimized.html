@@ -329,6 +329,11 @@
     <div class="tag">First and last name</div><div class="row"><input id="meName" placeholder="First name" autocomplete="off" style="flex:1"> <input id="meLast" placeholder="Last name" autocomplete="off" style="flex:1"></div>
     <div class="tag">Your age</div><div class="row"><input id="meAge" type="number" min="3" max="120" placeholder="e.g. 10, 35 or 70"></div>
   </div>
+  <div id="curRom" style="display:none;margin:12px 0">
+    <div class="tag">You are</div><div class="row"><input id="romGender" list="meGenders" placeholder="In your own words, e.g. a man" autocomplete="off"></div>
+    <div class="tag">Interested in</div><div class="row"><input id="romInterest" list="meInterests" placeholder="In your own words, e.g. women" autocomplete="off"></div>
+    <label><input type="checkbox" id="romNone" style="width:auto"> No romance this time</label>
+  </div>
   <div id="curDepth" style="display:none">
     <button class="big" id="depQuick">Quick start<small>Describe what you want in a sentence or two. The phonodeck fills in the rest as best it can, and the game begins.</small></button>
     <button class="big" id="depDeep">Deep set-up<small>A carefully curated experience: optionally upload a photo to paint the world from, then a few more questions, with suggestions tailored to what you have told me.</small></button>
@@ -1732,13 +1737,19 @@ function mePrefill() {   // answers filled in from Settings > Personal details
   const what = { everyone: 'anyone who catches my eye', anyone: 'anyone who catches my eye', both: 'women and men' }[i.toLowerCase()] || i.toLowerCase();
   if (me.name) out.name = [me.name, me.last].filter(Boolean).join(' ');
   if (me.born > 1900) out.age = String(new Date().getFullYear() - me.born);
-  if (g || i) out.romance = 'I am ' + who + (who.startsWith('someone who') ? ' and' : ' who is') + ' interested in ' + (what || '...');
+  if (g || i) out.romance = romanceText(g, i);
   return out;
+}
+function romanceText(g, i) {   // "I am a man who is interested in women" from the two free-text answers
+  g = String(g || '').trim(); i = String(i || '').trim();
+  const who = { male: 'a man', man: 'a man', m: 'a man', female: 'a woman', woman: 'a woman', f: 'a woman', 'non-binary': 'a non-binary person', nonbinary: 'a non-binary person' }[g.toLowerCase()] || (!g ? 'someone' : /^(a|an|the)\s/i.test(g) ? g : /\b(wo)?m[ae]n|person|guy|girl|boy|lady|dude|gal|bloke\b/i.test(g) ? 'a ' + g : 'someone who is ' + g);
+  const what = { everyone: 'anyone who catches my eye', anyone: 'anyone who catches my eye', both: 'women and men' }[i.toLowerCase()] || i.toLowerCase();
+  return 'I am ' + who + (who.startsWith('someone who') ? ' and' : ' who is') + ' interested in ' + (what || '...');
 }
 // The last question of the deep set-up, for adults only, and only when an earlier answer hints at romance (a "Romantic" vibe, love in the
 // feeling, a sweetheart among the company...). Pre-filled from Settings > Personal details. Without a hint it is skipped, and the details in
 // Settings still reach the story quietly as background (see playerBrief).
-const ROMANCE_Q = { id: 'romance', q: 'Any romance in this story?', h: 'Something you said suggests romance. Who are you, and who are you drawn to? It stays in the background unless you take it further. Pick "No romance" to leave it out.', c: ['No romance'], ph: 'I am a ... who is interested in ...' };
+const ROMANCE_Q = { id: 'romance', rom: true, q: 'Any romance in this story?', h: 'Something you said suggests romance. Tell the story who you are and who you are drawn to. It stays in the background unless you take it further. Filled in from Settings > Personal details, and saved there if those are empty.', c: [] };
 const noRomance = t => !String(t || '').trim() || isNoPref(t) || /^no romance/i.test(String(t).trim());
 const ROMANCE_HINT = /\b(roman\w*|love|lovers?|crush|flirt\w*|dating|date night|kiss\w*|sweetheart|passion\w*|wedding|marr(y|ied|iage)|seduc\w*|courtship|affair|soulmate)\b/i;
 function romanceHinted() {   // any earlier answer (not the romance answer itself) that mentions romance; "in love with a place" does not count
@@ -1833,8 +1844,10 @@ function curRender() {
   $('curQ').textContent = q.q; $('curHint').textContent = q.h + (cur.fromPhoto && cur.fromPhoto.includes(q.id) ? ' (Filled in from your photo: change anything you like.)' : '');
   $('curPhoto').style.display = q.photo ? '' : 'none'; showPhoto();
   const quick = q.depth && quickPick();
-  $('curMe').style.display = q.me ? '' : 'none'; $('curDepth').style.display = q.depth ? '' : 'none'; $('curSkip').style.display = q.me ? 'none' : '';
-  $('curA').style.display = q.me || (q.depth && !quick) ? 'none' : ''; $('curNext').style.display = q.depth && !quick ? 'none' : '';
+  $('curMe').style.display = q.me ? '' : 'none'; $('curDepth').style.display = q.depth ? '' : 'none'; $('curSkip').style.display = q.me || q.rom ? 'none' : '';
+  $('curRom').style.display = q.rom ? '' : 'none';
+  if (q.rom) { const me = S().me || {}, a = cur.answers; $('romGender').value = a.romGender !== undefined ? a.romGender : me.gender || ''; $('romInterest').value = a.romInterest !== undefined ? a.romInterest : me.interest || ''; $('romNone').checked = !!a.romNone; }
+  $('curA').style.display = q.me || q.rom || (q.depth && !quick) ? 'none' : ''; $('curNext').style.display = q.depth && !quick ? 'none' : '';
   $('depQuick').classList.toggle('primary', quick); $('depDeep').classList.toggle('primary', q.depth && deepPick());
   if (q.depth) $('curHint').textContent = quick ? 'Describe it in a sentence or a paragraph, then press "Create my experience".' : q.h;
   if (q.me) { const nm = String(cur.answers.name || '').trim().split(/\s+/); $('meName').value = nm.shift() || ''; $('meLast').value = nm.join(' '); $('meAge').value = cur.answers.age || ''; }
@@ -1854,6 +1867,8 @@ $('curSuggest').onclick = async () => { const q = curQs()[cur.i]; if (!q) return
 function curStore() {
   const q = curQs()[cur.i]; if (!q) return;
   if (q.depth) { if (quickPick()) cur.answers.describe = $('curA').value.trim(); return; }
+  if (q.rom) { const a = cur.answers; a.romGender = $('romGender').value.trim(); a.romInterest = $('romInterest').value.trim(); a.romNone = $('romNone').checked;
+    a.romance = a.romNone || (!a.romGender && !a.romInterest) ? 'No romance' : romanceText(a.romGender, a.romInterest); return; }
   if (!q.me) { cur.answers[q.id] = $('curA').value.trim(); return; }
   const n = +$('meAge').value; cur.answers.name = [$('meName').value.trim(), $('meLast').value.trim()].filter(Boolean).join(' '); cur.answers.age = n > 0 ? String(Math.round(n)) : '';
   cur.answers.me = meSummary();
@@ -1948,6 +1963,10 @@ async function curAdvance() {
     if (first && !me.name) { me.name = first; $('setMeName').value = first; ch = true; }
     if (last && !me.last && first.toLowerCase() === String(me.name).toLowerCase()) { me.last = last; $('setMeLast').value = last; ch = true; }
     if (age && !me.born) { me.born = new Date().getFullYear() - age; $('setMeBorn').value = me.born; ch = true; }
+    const mine = !first || !me.name || first.toLowerCase() === String(me.name).toLowerCase(), a = cur.answers;
+    if (mine && qs.includes(ROMANCE_Q) && !a.romNone) {
+      if (a.romGender && !me.gender) { me.gender = a.romGender; $('setMeGender').value = a.romGender; ch = true; }
+      if (a.romInterest && !me.interest) { me.interest = a.romInterest; $('setMeInterest').value = a.romInterest; ch = true; } }
     if (ch) { db.settings.me = me; persist(); } }
   let suggested;
   if (cur.src) { const base = cur.src.replace(/ \d+$/, ''); let k = 2; while (db.adventures[base + ' ' + k]) k++; suggested = base + ' ' + k; }
