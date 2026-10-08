@@ -28,8 +28,10 @@ export function cost(model, u) {
 }
 
 // ---------------- Redis (Upstash REST API, added from Vercel's storage marketplace) ----------------
-const RURL = () => process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const RTOK = () => process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+// Vercel names the variables KV_REST_API_URL and KV_REST_API_TOKEN, with any custom prefix chosen when the database was connected.
+const envEnding = (...ends) => { const k = Object.keys(process.env).sort((a, b) => a.length - b.length).find(n => ends.some(e => n.endsWith(e))); return k && process.env[k]; };
+const RURL = () => envEnding('KV_REST_API_URL', 'REDIS_REST_URL');
+const RTOK = () => envEnding('KV_REST_API_TOKEN', 'REDIS_REST_TOKEN');   // never the READ_ONLY token
 export async function redis(...cmds) {   // one or more commands, as arrays; returns their results in order
   if (!RURL() || !RTOK()) throw new Error('storage is not set up');
   const r = await fetch(RURL() + '/pipeline', { method: 'POST', headers: { Authorization: 'Bearer ' + RTOK(), 'Content-Type': 'application/json' }, body: JSON.stringify(cmds) });
