@@ -59,8 +59,8 @@
   .quest .q.done{color:var(--dim);text-decoration:line-through}
   h3{margin:18px 0 8px;color:var(--accent);font-size:15px;letter-spacing:.05em}
   .recap{border:1px dashed var(--accent);color:var(--dim);font-style:italic;background:transparent}
-  #micBtn{padding:8px 12px}
-  #micBtn.rec{background:#c0392b;border-color:#c0392b;animation:rec 1s infinite}
+  #micBtn{padding:8px 14px;border:2px solid var(--accent);color:var(--accent);font-weight:700;box-shadow:0 0 10px color-mix(in srgb,var(--accent) 45%,transparent)}
+  #micBtn.rec{background:#c0392b;border-color:#c0392b;color:#fff;box-shadow:none;animation:rec 1s infinite}
   @keyframes rec{0%,100%{opacity:1}50%{opacity:.55}}
   .msg.gm{cursor:pointer}
   .mini{padding:2px 8px;font-size:13px;margin-right:4px}
@@ -296,10 +296,10 @@
   <ol>
     <li><b>Turn your sound on.</b> A narrator reads the story aloud, so turn the volume up. On an iPhone or iPad, also make sure Silent Mode is off (in Control Center, the bell should not be crossed out).</li>
     <li><b>Try hands-free.</b> Tap <b>&#127911; Hands-free</b> next to Send, then just talk. When you have finished, say <b>"make it so"</b> and the phonodeck answers.</li>
-    <li><b>Allow the microphone</b> when your browser asks, so hands-free can hear you. You can do it now:</li>
+    <li><b>Test the microphone.</b> Allow it when your browser asks, then say a few words. If the words appear here, hands-free works.</li>
   </ol>
   <p class="warn" id="gwNoVoice" style="display:none"><b>This browser can't listen.</b> Hands-free talking needs <b>Chrome</b>, <b>Edge</b> or <b>Safari</b>: Firefox can't turn speech into text. The phonodeck is at its best when you talk to it, so please open the invite link you were sent in one of those browsers. You can still type here if you prefer.</p>
-  <button class="big" id="gwMic">Allow the microphone<small>Your browser asks once</small></button>
+  <button class="big" id="gwMic">Test the microphone<small>Allow it, then say something like "Hello, phonodeck"</small></button>
   <p class="tag" id="gwMicStatus"></p>
   <button class="big primary" id="gwStart">Start<small>A few quick questions, then your story begins</small></button>
   <p class="tag" id="gwLeft"></p>
@@ -2490,10 +2490,34 @@ function guestVoiceCheck() {   // hands-free needs the browser's speech recognit
   const ok = !!SR; $('gwNoVoice').style.display = ok ? 'none' : ''; $('gwMic').style.display = ok ? '' : 'none';
   $('gwStart').classList.toggle('primary', ok); $('gwStart').firstChild.textContent = ok ? 'Start' : 'Continue by typing';
 }
+// Allowing the microphone is not enough: some browsers have speech recognition that never returns words (Firefox, Brave, some Linux builds),
+// so listen for a few seconds and show what was heard.
+const VOICE_FAIL = 'This browser could not turn your speech into words. Hands-free needs <b>Chrome</b>, <b>Edge</b> or <b>Safari</b>, so please open the invite link you were sent in one of those. You can still type here if you prefer.';
+function gwVoiceFailed(why) {
+  $('gwMicStatus').textContent = why || '';
+  $('gwNoVoice').innerHTML = VOICE_FAIL; $('gwNoVoice').style.display = '';
+  $('gwStart').classList.remove('primary'); $('gwStart').firstChild.textContent = 'Continue by typing';
+}
 $('gwMic').onclick = async () => {
-  const st = $('gwMicStatus');
-  try { const m = await navigator.mediaDevices.getUserMedia({ audio: true }); m.getTracks().forEach(t => t.stop()); st.textContent = 'The microphone is allowed. You are all set.'; }
-  catch (e) { st.textContent = 'The microphone was not allowed (' + e.name + '). You can still type, or allow it later in your browser\'s settings for this site.'; }
+  const st = $('gwMicStatus'), btn = $('gwMic');
+  if (!SR) return gwVoiceFailed();
+  try { const m = await navigator.mediaDevices.getUserMedia({ audio: true }); m.getTracks().forEach(t => t.stop()); }
+  catch (e) { st.textContent = 'The microphone was not allowed (' + e.name + '). Allow it in your browser\'s settings for this site (the icon left of the address), then test again. You can still type.'; return; }
+  let r; try { r = new SR(); } catch (e) { return gwVoiceFailed(); }
+  r.lang = navigator.language || 'en-US'; r.interimResults = true; r.continuous = false;
+  let heard = '', failed = '', done = false;
+  const finish = () => { if (done) return; done = true; clearTimeout(timer); try { r.abort(); } catch (e) {} btn.disabled = false; btn.firstChild.textContent = 'Test again';
+    if (heard) { st.innerHTML = 'Heard: <b>"' + esc(heard) + '"</b>. Hands-free works, you are all set.'; $('gwNoVoice').style.display = 'none'; guestVoiceCheck(); }
+    else if (failed === 'no-speech' || !failed) st.textContent = 'I did not hear anything. Check the microphone is not muted, then test again and speak up.';
+    else if (failed === 'not-allowed' || failed === 'service-not-allowed' || failed === 'network' || failed === 'language-not-supported') gwVoiceFailed('Speech-to-text did not work here (' + failed + ').');
+    else st.textContent = 'The test did not finish (' + failed + '). Try again.'; };
+  r.onresult = e => { heard = [...e.results].map(x => x[0].transcript).join(' ').trim(); st.innerHTML = 'Hearing: <i>' + esc(heard) + '</i>'; };
+  r.onerror = e => { failed = e.error || 'error'; };
+  r.onend = () => setTimeout(finish, 50);
+  const timer = setTimeout(finish, 9000);
+  btn.disabled = true; btn.firstChild.textContent = 'Listening... say something';
+  st.textContent = 'Listening. Say "Hello, phonodeck".';
+  try { r.start(); } catch (e) { failed = 'start'; finish(); }
 };
 $('gwStart').onclick = () => {
   db.settings.guestWelcomed = db.settings.welcomed = true; db.settings.speak = true; persist();
